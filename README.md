@@ -1,0 +1,1 @@
+该项目由Unity2022.3.60f1、Odin Inspector v3.3.1.11、UniTask v2.5.10、Newtonsoft.Json v12.0.1、Serilog v4.0.0、Serilog.Enrichers.Thread v4.0.0、Serilog.Sinks.LiteDB v1.0.32、Serilog.Sinks.File v6.0.0、Serilog.Sinks.Debug v3.0.0、Serilog.Sinks.Console v6.0.0、Serilog.Settings.Configuration v9.0.0、Serilog.Extensions.Logging v9.0.2构建

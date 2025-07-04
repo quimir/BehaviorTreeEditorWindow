@@ -1,0 +1,320 @@
+using System;
+using System.Linq;
+using BehaviorTree.BehaviorTrees;
+using BehaviorTree.Core;
+using BehaviorTree.Core.WindowData;
+using BehaviorTree.Nodes;
+using Editor.EditorToolExs.BtNodeWindows;
+using Editor.View.BTWindows.BtTreeView;
+using Editor.View.BTWindows.BtTreeView.NodeView;
+using Editor.View.BtWindows.Core.EditorRestore;
+using Editor.View.BtWindows.InspectorUI.Core;
+using LogManager.Core;
+using LogManager.LogManagerFactory;
+using Script.BehaviorTree.Save;
+using Script.LogManager;
+using Script.Utillties;
+using Sirenix.Utilities;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace Editor.View.BtWindows.Core
+{
+    /// <summary>
+    /// Represents a specialized editor window for managing and interacting with Behavior Trees.
+    /// </summary>
+    public class BehaviorTreeWindows : BehaviorTreeWindowsBase
+    {
+        /// <summary>
+        /// Gets the currently focused BehaviorTreeWindows instance.
+        /// </summary>
+        /// <remarks>
+        /// This static property holds a reference to the BehaviorTreeWindows object
+        /// that is currently focused. It is set when the window gains focus and reset
+        /// to null when the window loses focus. This allows other components to access
+        /// the instance of the focused window as needed.
+        /// </remarks>
+        public static BehaviorTreeWindows FocusedWindow { get; private set; }
+
+        public BehaviorTreeView BehaviorTreeView { get; private set; }
+        public BehaviorTreeInspectorView BehaviorTreeInspectorView { get; private set; }
+        private SplitView split_view_;
+
+        [NonSerialized] private static readonly LogSpaceNode log_space_ = new("BehaviourTreeWindows");
+
+        [SerializeField] private VisualTreeAsset m_VisualTreeAsset;
+
+        [MenuItem("Window/UI Toolkit/BehaviourTreeWindows")]
+        public static void ShowExample()
+        {
+            var temp_tree = CreateTempTree();
+            BehaviorTreeManagers.instance.RegisterTree(temp_tree.GetTreeId(), temp_tree);
+
+            CreateWindowForTrees<BehaviorTreeWindows>(temp_tree.GetTreeId());
+        }
+
+        protected override void InitWindow(string trees_id)
+        {
+            WindowInstanceId = string.IsNullOrEmpty(WindowInstanceId) ? Guid.NewGuid().ToString() : WindowInstanceId;
+            var current_tree = BehaviorTreeManagers.instance.GetTree(trees_id);
+
+            // 没有值或者没有注册行为树的时候禁止访问
+            if (current_tree == null)
+            {
+                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(log_space_,
+                    new LogEntry(LogLevel.kError, "Cannot open window for an empty tree ID."), true);
+                Close();
+                return;
+            }
+
+            // 进行注册，防止莫名其妙的原因被另外的虚假窗口保存
+            if (!BehaviorTreeManagers.instance.RegisterWindow(trees_id, WindowInstanceId))
+            {
+                // 如果不能注册，则说明注册了一个虚假的窗口，取消虚假窗口的绑定并且重新将窗口绑定回来
+                BehaviorTreeManagers.instance.UnRegisterWindowFormTreeId(trees_id);
+                
+                BehaviorTreeManagers.instance.RegisterWindow(trees_id, WindowInstanceId);
+            }
+            
+            BuildWindowUI();
+        }
+
+        private void BuildWindowUI()
+        {
+            var root = rootVisualElement;
+            
+            var visual_tree =
+                AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                    "Assets/Editor/Resource/BtWindows/BehaviourTreeWindows.uxml");
+            var visual_uss =
+                AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Editor/Resource/BtWindows/BehaviourTreeWindows.uss");
+            visual_tree.CloneTree(root);
+            root.styleSheets.Add(visual_uss);
+
+            BehaviorTreeView = root.Q<BehaviorTreeView>();
+            BehaviorTreeView.Initialize(this);
+            BehaviorTreeInspectorView = root.Q<BehaviorTreeInspectorView>();
+            BehaviorTreeInspectorView.AddInspectorPanel(new NodePropertiesPanel(BehaviorTreeView, new Foldout
+                {
+                    text = "节点属性",
+                    value = true,
+                    style =
+                    {
+                        display = DisplayStyle.None
+                    }
+                })
+            );
+            BehaviorTreeInspectorView.AddInspectorPanel(new NodeStylePanels(BehaviorTreeView, new Foldout
+            {
+                text = "节点样式", value = true, style = { display = DisplayStyle.None }
+            }));
+            split_view_ = root.Q<SplitView>();
+
+            BehaviorTreeView.CurrentViewState = BehaviorTreeView.ViewState.kInitializing;
+
+            var current_tree =
+                BehaviorTreeManagers.instance.GetTree(
+                    BehaviorTreeManagers.instance.GetTreeIdByWindowId(WindowInstanceId));
+
+            if (current_tree?.GetNodeWindow()?.NodeStyleMap != null)
+                BehaviorTreeView.NodeStyleManager =
+                    new BtNodeStyleManager(current_tree.GetNodeWindow().NodeStyleMap.ToDictionary());
+
+            if (current_tree?.GetRoot() != null) BuildNodeViewFromRoot(current_tree.GetRoot());
+
+            if (BehaviorTreeView.NodeViewManager.NodeViews.Any())
+                BehaviorTreeView.nodes.OfType<BehaviorTreeNodeView>().ForEach(n => n.LinkLine());
+
+            var tree_window_data = current_tree?.GetNodeWindow();
+
+            if (tree_window_data?.EditorWindowData?.SplitViewWidth>0)
+            {
+                split_view_.FixedPaneInitialDimension=tree_window_data.EditorWindowData.SplitViewWidth;
+            }
+            if (tree_window_data?.EditorWindowData?.WindowRect is { width: > 0 })
+            {
+                position = tree_window_data.EditorWindowData.WindowRect;
+            }
+
+            if (tree_window_data?.EditorWindowData?.GraphViewTransform!=null)
+            {
+                BehaviorTreeView.viewTransform.position = tree_window_data.EditorWindowData.GraphViewTransform.position;
+                BehaviorTreeView.viewTransform.scale = tree_window_data.EditorWindowData.GraphViewTransform.scale;
+            }
+
+            BehaviorTreeView.CurrentViewState = BehaviorTreeView.ViewState.kUserEditing;
+        }
+
+        private void BuildNodeViewFromRoot(BtNodeBase root_node)
+        {
+            if (root_node == null) return;
+
+            var node_view = BehaviorTreeView.NodeViewManager.CreateNodeView(root_node);
+            BehaviorTreeView.AddElement(node_view);
+            switch (root_node)
+            {
+                case BtComposite composite:
+                    composite.ChildNodes.ForEach(BuildNodeView);
+                    break;
+                case BtPrecondition precondition:
+                    BuildNodeView(precondition.ChildNode);
+                    break;
+            }
+        }
+
+        private void BuildNodeView(BtNodeBase node_data)
+        {
+            if (node_data == null) return;
+
+            var node_view = BehaviorTreeView.NodeViewManager.CreateNodeView(node_data);
+            BehaviorTreeView.AddElement(node_view);
+
+            switch (node_data)
+            {
+                case BtComposite composite:
+                    composite.ChildNodes.ForEach(BuildNodeView);
+                    break;
+                case BtPrecondition precondition:
+                    BuildNodeView(precondition.ChildNode);
+                    break;
+            }
+        }
+
+        public void InitializeForRestoration(string windowId, string treeId)
+        {
+            WindowInstanceId = windowId;
+            
+            // 在管理器中重新绑定于树的绑定关系
+            BehaviorTreeManagers.instance.RegisterWindow(treeId,windowId);
+            
+            // 进行刷新
+            RefreshWindow();
+        }
+        
+        private void OnDestroy()
+        {
+            // 检查是否是编辑器退出
+            if (BehaviorTreeEditorLifecycleManager.IsQuitting)
+            {
+                return;
+            }
+            
+            SaveWindow();
+
+            var behavior_tree = BehaviorTreeManagers.instance.GetTreeByWindowId(WindowInstanceId);
+            if (behavior_tree is BehaviorTreeTemp)
+                BehaviorTreeManagers.instance.UnRegisterTree(behavior_tree.GetTreeId());
+            BehaviorTreeManagers.instance.UnRegisterWindowFromWindowId(WindowInstanceId);
+            
+            BehaviorTreeManagers.instance.SaveAllData();
+            
+            MenuBar.OnDestroy();
+            BehaviorTreeInspectorView.Dispose();
+        }
+        
+
+        protected override void OnFocus()
+        {
+            base.OnFocus();
+            FocusedWindow = this;
+        }
+
+        protected override void OnLostFocus()
+        {
+            base.OnLostFocus();
+            if (FocusedWindow == this) FocusedWindow = null;
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+        }
+
+        protected override void CreateGUI()
+        {
+            base.CreateGUI();
+        }
+
+        protected override void OnInspectorUpdate()
+        {
+            base.OnInspectorUpdate();
+            if (BehaviorTreeView==null)
+            {
+                return;
+            }
+            
+            BehaviorTreeView.nodes.OfType<BaseNodeView>().ForEach(n => n.UpdateView());
+
+            Repaint();
+        }
+
+        public override void RefreshWindow()
+        {
+            base.RefreshWindow();
+            var tree_id=BehaviorTreeManagers.instance.GetTreeIdByWindowId(WindowInstanceId);
+            if (string.IsNullOrEmpty(tree_id))
+            {
+                // 如果找不到关联数据，则关闭窗口
+                Close();
+                return;
+            }
+
+            if (rootVisualElement==null)
+            {
+                return;
+            }
+            // 清空并构建UI
+            rootVisualElement.Clear();
+            BuildWindowUI();
+        }
+
+        public override void SaveWindow()
+        {
+            if (BehaviorTreeView==null) return;
+            
+            if (BehaviorTreeView.IsDirty)
+            {
+                var is_open = EditorUtility.DisplayDialog("保存提示", "检查到当前文件进行变动没有保存，是否需要进行保存？", 
+                    "是", "否");
+
+                if (!is_open) return;
+            }
+
+            SaveNodeWindowData();
+        }
+
+        private void SaveNodeWindowData()
+        {
+            var active_tree_window = BehaviorTreeManagers.instance.GetTreeByWindowId(WindowInstanceId);
+
+            if (active_tree_window == null) return;
+
+            var active_tree_window_data = active_tree_window.GetNodeWindow();
+
+            var transform_view = new GraphViewTransform
+            {
+                position = BehaviorTreeView.viewTransform.position,
+                scale = BehaviorTreeView.viewTransform.scale,
+                rotation = BehaviorTreeView.viewTransform.rotation
+            };
+
+            if (active_tree_window_data != null)
+            {
+                active_tree_window_data.NodeStyleMap =
+                    BtNodeStyleCollection.FromDictionary(BehaviorTreeView.NodeStyleManager.NodeStyles);
+                // 防止出现为空的情况
+                if (active_tree_window_data.EditorWindowData == null)
+                {
+                    active_tree_window_data = new();
+                }
+                active_tree_window_data.EditorWindowData.GraphViewTransform = transform_view;
+                active_tree_window_data.EditorWindowData.WindowRect = position;
+                active_tree_window_data.EditorWindowData.SplitViewWidth = split_view_.FixedPaneInitialDimension;
+            }
+
+            active_tree_window.SaveBtWindow();
+            BtManagement.SavePathStorage();
+        }
+    }
+}

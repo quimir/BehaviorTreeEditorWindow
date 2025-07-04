@@ -97,3 +97,11 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Do not process NuGet; only upload the configuration file
+packages/
+!packages/repositories.config
+!packages.config
+
+# Exclude Odin's upload
+Plugins/Sirenix

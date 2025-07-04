@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" name="SplitView" fixed-pane-initial-dimension="200" editor-extension-mode="False">
+    <Editor.View.BtWindows.Core.SplitView>
+        <ui:VisualElement name="Left" style="min-width: 400px; min-height: auto; width: 597px;">
+            <Editor.View.BtWindows.InspectorUI.Core.BehaviorTreeInspectorView style="flex-grow: 1;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="Right" style="flex-grow: 1; width: -187px;">
+            <Editor.View.BTWindows.BtTreeView.BehaviorTreeView style="flex-grow: 1;" />
+        </ui:VisualElement>
+    </Editor.View.BtWindows.Core.SplitView>
+</ui:UXML>
