@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using Sirenix.OdinInspector;
 
 namespace BehaviorTree.BehaviorTreeBlackboard
@@ -12,9 +14,12 @@ namespace BehaviorTree.BehaviorTreeBlackboard
     [HideReferenceObjectPicker]
     public class LayeredBlackboard : IBlackboardStorage
     {
+        [PersistField]
         private readonly IBlackboardStorage shared_storage_;
+        [PersistField]
         private readonly IBlackboardStorage private_storage_;
         
+        [NonSerialize]
         public BlackboardStorage PrivateStorage=>private_storage_ as BlackboardStorage;
 
         /// <summary>

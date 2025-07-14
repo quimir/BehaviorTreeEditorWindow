@@ -1,5 +1,3 @@
-using System;
-
 namespace ExTools.Utillties
 {
     /// <summary>
@@ -86,6 +84,9 @@ namespace ExTools.Utillties
         kCustom
     }
 
+    /// <summary>
+    /// Specifies the type of property panel used to display and edit properties in the interface.
+    /// </summary>
     public enum PropertyPanelType
     {
         /// <summary>
@@ -111,26 +112,14 @@ namespace ExTools.Utillties
         kNodeStyle
     }
 
+    /// <summary>
+    /// Represents the state of an edge in a behavior tree or node-based visualization system.
+    /// </summary>
     public enum EdgeState
     {
         kNormal,
         kSuccess,
         kFailure,
         kRunning
-    }
-
-    [Flags]
-    public enum EdgeEffectCategory
-    {
-        kNone=0,
-        /// <summary>
-        /// 视觉效果
-        /// </summary>
-        kVisual=1<<0,
-        kAnimation=1<<1,
-        kInteraction=1<<2,
-        kOverlay=1<<3,
-        kBackground=1<<4,
-        kAll=kVisual|kAnimation|kInteraction|kOverlay|kBackground
     }
 }

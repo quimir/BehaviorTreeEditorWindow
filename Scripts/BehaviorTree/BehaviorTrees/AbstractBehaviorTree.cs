@@ -1,22 +1,25 @@
 using System;
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using BehaviorTree.Core;
 using BehaviorTree.Core.WindowData;
 using BehaviorTree.Nodes;
 using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.BehaviorTree;
-using Script.BehaviorTree.Save;
-using Script.LogManager;
-using Script.Save.Serialization;
-using Script.Save.Serialization.Storage;
-using Script.Utillties;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Storage.Serializer.JsonNet;
 using UnityEditor;
 using UnityEngine;
 
 namespace BehaviorTree.BehaviorTrees
 {
+    /// <summary>
+    /// Abstract base class representing a behavior tree structure.
+    /// This class provides core functionality for managing and manipulating
+    /// behavior tree data, including root node initialization, node management,
+    /// window data handling, and saving/loading behavior tree configurations.
+    /// </summary>
     public abstract class AbstractBehaviorTree : IBehaviorTrees
     {
         /// <summary>
@@ -37,7 +40,7 @@ namespace BehaviorTree.BehaviorTrees
         // 标记是否已经初始化
         protected bool initialized_ = false;
 
-        public static readonly LogSpaceNode bt_space_ =new LogSpaceNode("BehaviorTree") ;
+        protected static readonly LogSpaceNode bt_space_ =new LogSpaceNode("BehaviorTree") ;
 
         /// <summary>
         /// 安全初始化方法

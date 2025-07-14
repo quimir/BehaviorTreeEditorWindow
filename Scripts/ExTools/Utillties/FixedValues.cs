@@ -1,6 +1,6 @@
 #define DEBUG_MODE
 
-namespace Script.Utillties
+namespace ExTools.Utillties
 {
     public static class FixedValues
     {
@@ -33,5 +33,6 @@ namespace Script.Utillties
         public const string kSeriLogLogSpace = "logs";
         public const char kPathSeparator = '.';
         public const float kDefaultMaxTotalDirectorySizeMB = 100.0f;
+        public const string kDefaultFileStoragePath = "FileStorage.json";
     }
 }

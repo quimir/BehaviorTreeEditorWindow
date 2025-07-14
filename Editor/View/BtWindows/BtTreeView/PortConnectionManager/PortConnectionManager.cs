@@ -1,7 +1,7 @@
 using System;
 using Editor.View.BTWindows.BtTreeView;
 using Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge;
-using Script.Utillties;
+using ExTools.Utillties;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;

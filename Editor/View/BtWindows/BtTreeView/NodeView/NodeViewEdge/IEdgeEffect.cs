@@ -1,6 +1,5 @@
 using System;
 using ExTools.Utillties;
-using Script.Utillties;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -44,7 +43,8 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         /// Gets the root visual element associated with the edge effect.
         /// </summary>
         /// <remarks>
-        /// This property provides access to the primary <see cref="VisualElement"/> used for rendering or managing the visual representation of the edge effect.
+        /// This property provides access to the primary <see cref="VisualElement"/> used for rendering or managing the
+        /// visual representation of the edge effect.
         /// It serves as the base container for all visual components related to the effect.
         /// </remarks>
         VisualElement Root { get; }

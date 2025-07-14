@@ -2,7 +2,6 @@ using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Core;
 using Editor.View.BTWindows;
 using Editor.View.BtWindows.Core;
-using Script.Utillties;
 using UnityEditor;
 
 namespace Editor.EditorToolExs

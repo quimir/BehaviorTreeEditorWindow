@@ -6,10 +6,13 @@ using BehaviorTree.Core.WindowData;
 using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
+using Save.Serialization.Core;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Factory;
+using Save.Serialization.Storage.Serializer;
+using Save.Serialization.Storage.Serializer.JsonNet;
 using Script.Save.Serialization;
 using Script.Save.Serialization.Factory;
-using Script.Save.Serialization.Storage;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 
@@ -38,7 +41,8 @@ namespace Editor.View.BtWindows.Core.EditorRestore
         private static void OnBeforeAssemblyReload()
         {
             ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
-                new LogSpaceNode("Root"), new LogEntry(LogLevel.kInfo, "[LifecycleManager] 检测到脚本即将重载，请求保存窗口状态..."));
+                new LogSpaceNode("Root"), new LogEntry(LogLevel.kInfo, "[LifecycleManager] 检测到脚本" +
+                                                                       "即将重载，请求保存窗口状态..."));
             RequestSaveState();
         }
 
@@ -81,15 +85,17 @@ namespace Editor.View.BtWindows.Core.EditorRestore
             IsQuitting = true;
             EditorPrefs.SetBool("UnityEditor_DidQuitCleanly", true);
             ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
-                .AddLog(new LogSpaceNode("Root"), new LogEntry(LogLevel.kInfo, "编辑器正在退出，保存所有窗口状态..."), true);
+                .AddLog(new LogSpaceNode("Root"), new LogEntry(LogLevel.kInfo, 
+                    "编辑器正在退出，保存所有窗口状态..."), true);
             SaveOpenWindowState();
             return true;
         }
 
         /// <summary>
         /// Restores the layout and state of open Behavior Tree Editor windows upon startup.
-        /// Reads the saved window configurations from EditorPrefs, validates their data, and attempts to reconstruct the windows based on their serialized states.
-        /// Removes any unrelated or invalid window data to ensure a clean state during restoration.
+        /// Reads the saved window configurations from EditorPrefs, validates their data, and attempts to reconstruct
+        /// the windows based on their serialized states.Removes any unrelated or invalid window data to ensure a clean
+        /// state during restoration.
         /// </summary>
         private static void RestoreWindowsOnStartup()
         {
@@ -104,7 +110,10 @@ namespace Editor.View.BtWindows.Core.EditorRestore
                 new LogSpaceNode("Root"),
                 new LogEntry(LogLevel.kInfo, $"[LifecycleManager] 准备恢复 {window_states.States.Count} 个窗口..."));
 
-            CloseZombieWindows();
+            var all_windows = Resources.FindObjectsOfTypeAll<BehaviorTreeWindows>();
+            var zombie_windows =
+                new List<BehaviorTreeWindows>(all_windows.Where(w => string.IsNullOrEmpty(w.WindowInstanceId)));
+            
 
             // 获取序列化器，用于重构临时数
             var serializer = SerializerCreator.Instance.Create<JsonSerializerWithStorage>(SerializerType.kJson,
@@ -141,7 +150,8 @@ namespace Editor.View.BtWindows.Core.EditorRestore
                             {
                                 ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
                                     .AddLog(new LogSpaceNode("Root"),
-                                        new LogEntry(LogLevel.kError, $"[LifecycleManager] 从JSON重建临时树失败: {e}"), true);
+                                        new LogEntry(LogLevel.kError, $"[LifecycleManager] 从JSON重建临时树失败: " +
+                                                                      $"{e}"), true);
                             }
 
                         break;
@@ -154,39 +164,84 @@ namespace Editor.View.BtWindows.Core.EditorRestore
                 // 如果树已经成功恢复或找到，现在就恢复窗口本身
                 if (can_restore)
                 {
-                    var all_windows = Resources.FindObjectsOfTypeAll<BehaviorTreeWindows>();
-                    var open_window = all_windows.FirstOrDefault(n => n.WindowInstanceId == state.WindowId);
-                    if (open_window != null)
+                    var already_initialized_window =
+                        all_windows.FirstOrDefault(n => n.WindowInstanceId == state.WindowId);
+                    if (already_initialized_window!=null)
                     {
-                        open_window.RefreshWindow();
+                        already_initialized_window.RefreshWindow();
                         continue;
                     }
 
-                    var window = EditorWindow.CreateWindow<BehaviorTreeWindows>();
-                    window.InitializeForRestoration(state.WindowId, state.AssociatedTreeId);
-                    window.Show();
+                    BehaviorTreeWindows window_to_adopt = null;
+                    
+                    // 位置匹配
+                    if (zombie_windows.Count>0)
+                    {
+                        window_to_adopt = zombie_windows.FirstOrDefault(w => w.position == state.Position);
+                    }
+                    
+                    // 如果匹配失败，则随机认领一个
+                    if (window_to_adopt==null&&zombie_windows.Count>0)
+                    {
+                        ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
+                            new LogSpaceNode("Root"),
+                            new LogEntry(LogLevel.kWarning, $"[LifecycleManager] 未找到位置匹配的窗口，为 Tree ID: {state.AssociatedTreeId} 随机认领一个。"));
+
+                        window_to_adopt = zombie_windows[0];
+                    }
+
+                    if (window_to_adopt)
+                    {
+                        // 成功认领一个窗口 (无论是通过位置还是备用策略)
+                        zombie_windows.Remove(window_to_adopt);
+                        
+                        ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
+                            new LogSpaceNode("Root"),
+                            new LogEntry(LogLevel.kInfo, $"[LifecycleManager] 成功复用一个现有窗口来恢复 Tree ID: {state.AssociatedTreeId}"));
+                        
+                        window_to_adopt.InitializeForRestoration(state.WindowId,state.AssociatedTreeId);
+                        window_to_adopt.Focus();
+                    }
+                    else
+                    {
+                        // 策略 4: 创建新窗口 (如果上面所有策略都失败)
+                        ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
+                            new LogSpaceNode("Root"),
+                            new LogEntry(LogLevel.kWarning, $"[LifecycleManager] 所有复用策略均失败，为 Tree ID: {state.AssociatedTreeId} 创建一个新窗口。"));
+
+                        var window = EditorWindow.CreateWindow<BehaviorTreeWindows>();
+                        window.InitializeForRestoration(state.WindowId,state.AssociatedTreeId);
+                        // 新创建的窗口，可以尝试设置其应有的位置
+                        if (state.Position is { width: > 0, height: > 0 })
+                        {
+                            window.position=state.Position;
+                        }
+                        
+                        window.Show();
+                        window.Focus();
+                    }
                 }
                 else
                 {
                     ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
                         new LogSpaceNode("Root"),
                         new LogEntry(LogLevel.kWarning,
-                            $"[LifecycleManager] 无法恢复窗口 {state.WindowId}，因为其关联的行为树 {state.AssociatedTreeId} 数据丢失或无效。"),
+                            $"[LifecycleManager] 无法恢复窗口 {state.WindowId}，因为其关联的行为树 " +
+                            $"{state.AssociatedTreeId} 数据丢失或无效。"),
                         true);
                 }
             }
 
-            EditorPrefs.DeleteKey(OpenWindowsPrefsKey);
-        }
+            // 关闭任何未被认领的僵尸窗口 (如果Unity恢复的窗口比我们保存的状态要多)
+            foreach (var remaining_zombie in zombie_windows)
+            {
+                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
+                    new LogSpaceNode("Root"),
+                    new LogEntry(LogLevel.kWarning, $"[LifecycleManager] 关闭一个多余的、未被认领的窗口。"));
+                remaining_zombie.Close();
+            }
 
-        private static void CloseZombieWindows()
-        {
-            // 查找所有Unity自动回复的、没有我们自定义ID的窗口
-            var all_windows = Resources.FindObjectsOfTypeAll<BehaviorTreeWindows>();
-            foreach (var window in all_windows)
-                if (string.IsNullOrEmpty(window.WindowInstanceId))
-                    // 这是一个没有被我们逻辑初始化的“僵尸”窗口，关闭它
-                    window.Close();
+            EditorPrefs.DeleteKey(OpenWindowsPrefsKey);
         }
 
         private static void SaveOpenWindowState()
@@ -217,6 +272,7 @@ namespace Editor.View.BtWindows.Core.EditorRestore
                 {
                     WindowId = window.WindowInstanceId,
                     AssociatedTreeId = tree.GetTreeId(),
+                    Position = window.position,
                 };
 
                 if (tree is BehaviorTreeTemp)

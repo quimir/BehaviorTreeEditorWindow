@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
+using BehaviorTree.Nodes.ChildNode;
 using ExTools;
 using ExTools.Utillties;
-using Script.Utillties;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -62,21 +65,66 @@ namespace BehaviorTree.Nodes
     public abstract class BtComposite : BtNodeBase
     {
         /// <summary>
+        /// Represents the storage mechanism for managing child nodes within a composite behavior tree node.
+        /// Encapsulates functionalities for adding, removing, and retrieving child nodes.
+        /// </summary>
+        [SerializeReference, HideReferenceObjectPicker]
+        [PanelDelegatedProperty(PropertyPanelType.kChildNodes)]
+        [ShowInInspector]
+        [LabelText("子节点")]
+        [PersistField(Required = true)]
+        protected IChildNodeStorage storage_;
+
+        /// <summary>
+        /// Represents a composite node in a behavior tree, which can contain and manage multiple child nodes.
+        /// Composite nodes are responsible for organizing and controlling the flow of execution among their child nodes.
+        /// </summary>
+        protected BtComposite(IChildNodeStorage storage)
+        {
+            storage_ = storage;
+        }
+
+        protected BtComposite()
+        {
+            storage_ = new BasicChildStorage();
+        }
+
+        /// <summary>
+        /// Adds a child node to the composite node.
+        /// </summary>
+        /// <param name="node">The child node to be added.</param>
+        public virtual void AddChild(BtNodeBase node)
+        {
+            storage_.AddChild(node);
+        }
+
+        /// <summary>
+        /// Removes a specified child node from the composite node's storage.
+        /// </summary>
+        /// <param name="node">The child node to be removed from the storage.</param>
+        /// <returns>True if the child node was successfully removed; otherwise, false.</returns>
+        public virtual bool RemoveChildNode(BtNodeBase node)
+        {
+            return storage_?.RemoveChildNode(node) ?? false;
+        }
+
+        /// <summary>
+        /// Relink the cloned nodes within the behavior tree composite structure.
+        /// Ensures the internal and child node references are updated correctly during cloning operations.
+        /// </summary>
+        /// <param name="allClonedNodes">A collection of all nodes that have been cloned and may require relinking.</param>
+        public virtual void PostCloneRelink(IReadOnlyCollection<BtNodeBase> allClonedNodes)
+        {
+            storage_.PostCloneRelink(allClonedNodes);
+        }
+
+        /// <summary>
         /// Represents a list of child nodes associated with a behavior tree composite node.
         /// Used to define and manage hierarchical relationships between nodes in a behavior tree structure.
         /// </summary>
-        [FoldoutGroup("@node_name_")]
-        [LabelText("子节点")]
-        [ShowInInspector,ShowIf("ShowChildNodes")]
-        [PanelDelegatedProperty(PropertyPanelType.kChildNodes)]
-        [HideReferenceObjectPicker]
-        public List<BtNodeBase> ChildNodes = new List<BtNodeBase>();
-
-        /// <summary>
-        /// 是否需要在UI面板显示子节点(如果你有自己管理的子节点就将其设置为false，如果是用BtComposite管理的子节点那么推荐为true，
-        /// 但是推荐只使用一个子节点作为面板显示)
-        /// </summary>
-        protected abstract bool ShowChildNodes { get; }
+        [NonSerialize]
+        //[JsonIgnore]
+        public List<BtNodeBase> ChildNodes => storage_?.GetChildNodesAsBase() ?? new List<BtNodeBase>();
     }
     
     /// <summary>
@@ -85,7 +133,8 @@ namespace BehaviorTree.Nodes
     public abstract class BtPrecondition : BtNodeBase
     {
         /// <summary>
-        /// 子节点
+        /// Represents a child node of the current behavior tree node.
+        /// It is used to establish hierarchical relationships within the behavior tree structure.
         /// </summary>
         [FoldoutGroup("@node_name_")]
         [LabelText("子节点")]
@@ -93,6 +142,19 @@ namespace BehaviorTree.Nodes
         [ShowInInspector]
         [HideReferenceObjectPicker]
         public BtNodeBase ChildNode;
+
+        /// <summary>
+        /// Updates references for all cloned nodes after a deep copy operation to ensure the correct linkage.
+        /// </summary>
+        /// <param name="allClonedNodes">A read-only collection containing all nodes that were cloned during the deep
+        /// copy process.</param>
+        public virtual void PostCloneRelink(IReadOnlyCollection<BtNodeBase> allClonedNodes)
+        {
+            if (ChildNode!=null && !allClonedNodes.Contains(ChildNode))
+            {
+                ChildNode = null;
+            }
+        }
     }
 
     /// <summary>

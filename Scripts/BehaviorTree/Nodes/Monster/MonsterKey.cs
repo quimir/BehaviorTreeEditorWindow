@@ -1,4 +1,5 @@
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using UnityEngine;
 
 namespace BehaviorTree.Nodes.Monster

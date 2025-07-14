@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using BehaviorTree.Nodes;
 using ExTools.Singleton;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.BehaviorTree;
-using Script.LogManager;
-using Script.Utillties;
+using Script.Tool;
+using Script.Tool.NodeFoldout;
 using UnityEngine;
 
-namespace Script.Tool.NodeFoldout
+namespace ExTools.NodeFoldout
 {
     public class BtNodeLocalizationManager :SingletonWithLazy<BtNodeLocalizationManager>
     {

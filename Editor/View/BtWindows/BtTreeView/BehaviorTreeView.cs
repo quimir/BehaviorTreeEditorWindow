@@ -2,21 +2,25 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BehaviorTree;
-using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Nodes;
-using Editor.EditorToolEx.Operation;
 using Editor.EditorToolExs;
 using Editor.EditorToolExs.BtNodeWindows;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Storage;
+using Editor.View.BtWindows.BtTreeView;
+using Editor.View.BtWindows.BtTreeView.NodeView;
 using Editor.View.BTWindows.BtTreeView.NodeView;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
 using Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge;
+using Editor.View.BtWindows.BtTreeView.Operation;
 using Editor.View.BTWindows.BtTreeView.Operation;
 using Editor.View.BtWindows.BtTreeView.PortConnectionManager;
 using Editor.View.BtWindows.Core;
 using Editor.View.BtWindows.NodeMenuProvider;
 using Editor.View.BTWindows.NodeMenuProvider;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.Utillties;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -24,17 +28,18 @@ using UnityEngine.UIElements;
 
 namespace Editor.View.BTWindows.BtTreeView
 {
-    public class BehaviorTreeView : GraphView
+    /// <summary>
+    /// Represents a custom graph view for creating and managing behavior trees in the Unity editor.
+    /// </summary>
+    /// <remarks>
+    /// This class is responsible for managing the visual representation of a behavior tree, including
+    /// nodes, edges, and various user operations like copy, paste, cut, and delete. It provides an
+    /// interface for handling node view management, styling, and operations, such as connecting or
+    /// deleting nodes.
+    /// </remarks>
+    public class BehaviorTreeView : GraphView,IDisposable
     {
         #region 数据储存
-
-        private List<BtNodeBase> copy_node_ = new();
-
-        public List<BtNodeBase> CopyNode
-        {
-            get => copy_node_;
-            set => copy_node_ = value;
-        }
 
         private BtNodeViewManager node_view_manager_;
 
@@ -69,6 +74,10 @@ namespace Editor.View.BTWindows.BtTreeView
 
         #region 历史操作
 
+        /// <summary>
+        /// Stores the starting positions of nodes during a drag operation
+        /// to track and process movement within the behavior tree view.
+        /// </summary>
         private readonly Dictionary<BehaviorTreeNodeView, Vector2> node_drag_start_positions = new();
 
         private OperationManager operation_manager_;
@@ -92,37 +101,11 @@ namespace Editor.View.BTWindows.BtTreeView
 
         private ViewState current_view_state_ = ViewState.kInitializing;
 
-        private bool is_dirty_ = false; // 脏标记
-
         public ViewState CurrentViewState
         {
             get => current_view_state_;
-            set
-            {
-                if (current_view_state_ != value)
-                {
-                    current_view_state_ = value;
-                    OnStateChanged?.Invoke(value);
-                }
-            }
+            set => current_view_state_ = value;
         }
-
-        public bool IsDirty
-        {
-            get => is_dirty_;
-            private set
-            {
-                if (is_dirty_ != value)
-                {
-                    is_dirty_ = value;
-                    OnDirtyStateChanged?.Invoke(value);
-                }
-            }
-        }
-
-        public event Action<ViewState> OnStateChanged;
-
-        public event Action<bool> OnDirtyStateChanged;
 
         #endregion
 
@@ -160,6 +143,13 @@ namespace Editor.View.BTWindows.BtTreeView
 
         #region 初始化部分
 
+        /// <summary>
+        /// Sets up the behavior tree view by initializing its components, applying style configurations,
+        /// and registering necessary callbacks for user interactions and updates. It also prepares the
+        /// view for integration with the provided BehaviorTreeWindows instance.
+        /// </summary>
+        /// <param name="windows">The BehaviorTreeWindows instance that manages and interacts with the behavior
+        /// tree view.</param>
         public void Initialize(BehaviorTreeWindows windows)
         {
             windows_ = windows;
@@ -182,7 +172,6 @@ namespace Editor.View.BTWindows.BtTreeView
 
             RegisterCallback<MouseDownEvent>(OnMouseDownControl, TrickleDown.TrickleDown);
             RegisterCallback<MouseUpEvent>(OnGraphViewMouseUp);
-            RegisterCallback<KeyDownEvent>(KeyDownControl);
 
             RegisterCallback<PointerUpEvent>(OnPotentialSelectionChange);
 
@@ -265,131 +254,44 @@ namespace Editor.View.BTWindows.BtTreeView
             nodeCreationRequest += context => { node_menu_provider_.ShowMenu(context.screenMousePosition); };
 
             operation_manager_ = new OperationManager();
-
-            operation_manager_.OnOperationExecuted += () =>
-            {
-                if (current_view_state_ == ViewState.kUserEditing) is_dirty_ = true;
-            };
         }
 
         #endregion
 
         #region 键盘操作
 
-        private void KeyDownControl(KeyDownEvent evt)
-        {
-            switch (evt.keyCode)
-            {
-                case KeyCode.Delete:
-                    HandleDelete(evt);
-                    break;
-            }
-
-            var is_copy_paste_modifier =
-                Application.platform == RuntimePlatform.OSXEditor ? evt.commandKey : evt.ctrlKey;
-
-            if (!is_copy_paste_modifier) return;
-
-            switch (evt.keyCode)
-            {
-                case KeyCode.S:
-                    if (BehaviorTreeWindows.FocusedWindow)
-                    {
-                        BehaviorTreeWindows.FocusedWindow.SaveWindow();
-                        MarkAsSaved();
-                        evt.StopPropagation();
-                        evt.PreventDefault();
-                    }
-                    break;
-                case KeyCode.C:
-                    HandleCopy(evt);
-                    break;
-                case KeyCode.V:
-                    HandlePaste(evt);
-                    break;
-                case KeyCode.Z:
-                    if (evt.shiftKey)
-                        HandleRedo(evt);
-                    else
-                        HandleUndo(evt);
-                    break;
-                case KeyCode.Y:
-                    HandleRedo(evt);
-                    break;
-                case KeyCode.X:
-                    handleCut(evt);
-                    break;
-                case KeyCode.A:
-                    var node_views = this.Query<BehaviorTreeNodeView>().ToList();
-                    AddSelectedNode(node_views);
-                    break;
-                case KeyCode.D:
-                    HandleCopy(evt);
-                    HandlePaste(evt);
-                    break;
-            }
-
-            // 如果检查尚未安排
-            if (!selection_check_scheduled_)
-            {
-                selection_check_scheduled_ = true;
-
-                schedule.Execute(() =>
-                {
-                    CheckSelectionChanged();
-                    selection_check_scheduled_ = false;
-                }).ExecuteLater(0);
-            }
-        }
-
-        private void handleCut(KeyDownEvent evt)
+        public void HandleCutNodeData()
         {
             if (selection.Count == 0) return;
-
+            
             CutNodeData();
-
-            if (evt != null)
-            {
-                evt.StopPropagation();
-                evt.PreventDefault();
-            }
         }
 
         public void CutNodeData()
         {
             CopyNodeData();
             var selected_nodes = selection.OfType<BaseNodeView>().ToList();
-            DeleteNodeData(selected_nodes);
+            DeleteNodeDataWithOperation(selected_nodes);
         }
 
-        private void HandleCopy(KeyDownEvent evt)
+        public void HandleCopyNode()
         {
-            if (selection.Count == 0) return;
-
-            var selected_node_views = selection.OfType<BaseNodeView>().ToList();
-            if (selected_node_views.Count == 0) return;
-
+            if (selection.Count==0)
+            {
+                return;
+            }
+            
             CopyNodeData();
-            if (evt != null)
-            {
-                evt.StopPropagation();
-                evt.PreventDefault();
-            }
         }
 
-        private void HandlePaste(KeyDownEvent evt)
+        public void HandlePasteNode()
         {
-            // 两者都不允许为空为空这认为没有数据
-            if (copy_node_ == null || copy_node_.Count == 0) return;
-
-            PasteNodeData();
-
-            // 静止向上传递行为
-            if (evt != null)
+            if (!CopyNodeDataManager.Instance.IsCopyNode)
             {
-                evt.StopPropagation();
-                evt.PreventDefault();
+                return;
             }
+            
+            PasteNodeData();
         }
 
         public void AddSelectedNode(List<BehaviorTreeNodeView> node_views)
@@ -402,36 +304,39 @@ namespace Editor.View.BTWindows.BtTreeView
             foreach (var node_view in node_views)
                 // GraphView的selection集合会自动更新视图的选中状态
                 AddToSelection(node_view);
+
+            FrameSelection();
         }
 
-        private void HandleDelete(KeyDownEvent evt)
+        public bool HandleDeleteSelection()
         {
-            if (selection.Count == 0) return;
+            if (selection.Count==0)
+            {
+                return false;
+            }
+            
             ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
                 .AddLog(log_space_, new LogEntry(LogLevel.kInfo, "触发移除操作"), kOutConsole);
-
+            
             var selected_nodes = selection.OfType<BaseNodeView>().ToList();
             var selected_nodes_edge = selection.OfType<Edge>().ToList();
-
-            // 关键: 在移除元素之前清除选择
+            
             selection.Clear();
             ClearSelection();
-
-            // 先标记为即将删除，避免其他操作
-            foreach (var node in selected_nodes)
-            {
-                node.style.opacity = 0.3f;
-                node.pickingMode = PickingMode.Ignore;
-            }
-
-            foreach (var edge in selected_nodes_edge) edge.pickingMode = PickingMode.Ignore;
-
-            // 3. 执行删除 (最好是同步或0延迟)
+            
             schedule.Execute(() =>
             {
                 try
                 {
-                    PerformDelete(selected_nodes, selected_nodes_edge);
+                    operation_manager_.BeginOperationGroup();
+                    var deleted_nodes = new DeleteNodesCompositeOperation(selected_nodes, this);
+                    operation_manager_.ExecuteOperation(deleted_nodes);
+                    foreach (var edge in selected_nodes_edge)
+                    {
+                        var disconnect_operation = new RemoveEdgeOperation(edge, node_view_manager_);
+                        operation_manager_.ExecuteOperation(disconnect_operation);
+                    }
+                    operation_manager_.EndOperationGroup();
                 }
                 catch (Exception ex)
                 {
@@ -441,83 +346,19 @@ namespace Editor.View.BTWindows.BtTreeView
                 }
             }).ExecuteLater(10); // 尽可能小的延迟
 
-            if (evt != null)
-            {
-                evt.StopPropagation();
-                evt.PreventDefault();
-            }
-        }
-
-        private void PerformDelete(List<BaseNodeView> selected_nodes, List<Edge> selected_nodes_edge)
-        {
-            var has_root_node =
-                selected_nodes.Any(node => node.NodeData == BehaviorTreeManagers.instance.
-                    GetTreeByWindowId(windows_.WindowInstanceId).GetRoot());
-
-            if (has_root_node)
-                node_view_manager_.DeleteRootNode(selected_nodes.First(node =>
-                    node.NodeData == BehaviorTreeManagers.instance.GetTreeByWindowId(windows_.WindowInstanceId).GetRoot()));
-            else
-                node_view_manager_.DeleteNodeData(selected_nodes);
-
-            node_view_manager_.DeleteEdgeAndData(selected_nodes_edge);
-        }
-
-        /// <summary>
-        /// 处理撤销操作
-        /// </summary>
-        /// <param name="evt">键盘事件</param>
-        private void HandleUndo(KeyDownEvent evt)
-        {
-            if (operation_manager_.CanUndo)
-            {
-                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
-                    .AddLog(log_space_, new LogEntry(LogLevel.kInfo, "触发撤销事件"), kOutConsole);
-                operation_manager_.Undo();
-                IsDirty = operation_manager_.RequireSave;
-                evt?.StopPropagation();
-                evt?.PreventDefault();
-            }
-        }
-
-        /// <summary>
-        /// 处理重做操作
-        /// </summary>
-        /// <param name="evt">键盘事件</param>
-        private void HandleRedo(KeyDownEvent evt)
-        {
-            if (operation_manager_.CanRedo)
-            {
-                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
-                    .AddLog(log_space_, new LogEntry(LogLevel.kInfo, "触发重做事件"), kOutConsole);
-                operation_manager_.Redo();
-                IsDirty = operation_manager_.RequireSave;
-                evt?.StopPropagation();
-                evt?.PreventDefault();
-            }
+            return true;
         }
 
         #endregion
 
         private void OnMouseDownControl(MouseDownEvent evt)
         {
-            Focus();
-
             // 记录所有选中节点的起始位置
             if (evt.button == 0)
                 foreach (var selected_element in selection)
                     if (selected_element is BehaviorTreeNodeView node_view)
                         node_drag_start_positions[node_view] = node_view.GetPosition().position;
         }
-
-        #region 请求窗口聚焦
-
-        public void RequestTreeViewFocus()
-        {
-            Focus();
-        }
-
-        #endregion
 
         private void OnGraphViewMouseUp(MouseUpEvent evt)
         {
@@ -570,6 +411,11 @@ namespace Editor.View.BTWindows.BtTreeView
 
         private GraphViewChange OnGraphViewChanged(GraphViewChange graph_view_change)
         {
+            if (operation_manager_.IsOperationInProgress)
+            {
+                return graph_view_change;
+            }
+            
             // 只在用户变价状态下记录操作
             if (current_view_state_ == ViewState.kUserEditing)
             {
@@ -577,8 +423,6 @@ namespace Editor.View.BTWindows.BtTreeView
                 if (graph_view_change.edgesToCreate != null)
                     foreach (var edge in graph_view_change.edgesToCreate)
                     {
-                        EditorExTools.Instance.LinkLineAddData(edge);
-
                         var connect_operation = new ConnectEdgeOperation(edge, this);
                         operation_manager_.ExecuteOperation(connect_operation);
                     }
@@ -586,38 +430,36 @@ namespace Editor.View.BTWindows.BtTreeView
                 // 处理元素删除
                 if (graph_view_change.elementsToRemove != null)
                 {
-                    // 处理边的删除
-                    var edges_to_remove = graph_view_change.elementsToRemove.OfType<Edge>().ToList();
+                    // 分别处理边删除和节点删除
+                    var edges_to_remove=graph_view_change.elementsToRemove.OfType<Edge>().ToList();
+                    var nodes_to_remove = graph_view_change.elementsToRemove.OfType<BaseNodeView>().ToList();
+                    
+                    operation_manager_.BeginOperationGroup();
 
-                    foreach (var edge in edges_to_remove)
+                    try
                     {
-                        EditorExTools.Instance.UnLinkLineDelete(edge);
+                        // 处理单独的边删除（不属于节点删除的边）
+                        var standalone_edges = edges_to_remove.Where(edge => !nodes_to_remove.Any(node =>
+                            (node.InputPort != null && node.InputPort.connections.Contains(edge)) || (node.OutputPort
+                                != null && node.OutputPort.connections.Contains(edge)))).ToList();
 
-                        var disconnect_operation = new DisconnectEdgeOperation(edge, this);
-                        operation_manager_.ExecuteOperation(disconnect_operation);
-                    }
-
-                    // 处理节点删除
-                    var nodes_to_delete = graph_view_change.elementsToRemove.OfType<BehaviorTreeNodeView>().ToList();
-
-                    if (nodes_to_delete.Any())
-                    {
-                        var deleted_nodes = nodes_to_delete.Select(nv => nv.NodeData).ToList();
-                        var connections = new Dictionary<string, List<Edge>>();
-
-                        foreach (var node_view in nodes_to_delete)
+                        foreach (var edge in standalone_edges)
                         {
-                            var connection = new List<Edge>();
-                            if (node_view.InputPort != null) connection.AddRange(node_view.InputPort.connections);
-
-                            if (node_view.OutputPort != null) connection.AddRange(node_view.OutputPort.connections);
-
-                            connections[node_view.NodeData.Guild] = connection;
+                            var disconnect_operation = new RemoveEdgeOperation(edge, node_view_manager_);
+                            operation_manager_.ExecuteOperation(disconnect_operation);
                         }
 
-                        var deleted_operation = new DeleteNodeViewOperation(deleted_nodes, connections, this);
-
-                        operation_manager_.ExecuteOperation(deleted_operation);
+                        // 处理节点删除（包括相关的边）
+                        if (nodes_to_remove.Any())
+                        {
+                            var delete_operation =
+                                new DeleteNodesCompositeOperation(nodes_to_remove.Cast<BaseNodeView>().ToList(), this);
+                            operation_manager_.ExecuteOperation(delete_operation);
+                        }
+                    }
+                    finally
+                    {
+                        operation_manager_.EndOperationGroup();
                     }
                 }
             }
@@ -643,37 +485,56 @@ namespace Editor.View.BTWindows.BtTreeView
             if (selection.OfType<BehaviorTreeNodeView>().ToList().Count == 0) return;
             var node_data = selection.OfType<BehaviorTreeNodeView>().Select(view => view.NodeData).ToList();
 
-            copy_node_ = node_data.CloneData();
+            CopyNodeDataManager.Instance.AddNodeData(node_data);
         }
 
         public void PasteNodeData()
         {
-            var node_paste = new List<BehaviorTreeNodeView>();
-
-            foreach (var node in copy_node_)
+            if (!CopyNodeDataManager.Instance.IsCopyNode)
             {
-                var node_views = node_view_manager_.CreateNodeView(node);
-                AddElement(node_views);
-                node_paste.Add(node_views);
+                return;
             }
 
-            node_paste.ForEach(n => n.LinkLine());
-            copy_node_ = copy_node_.CloneData();
+            Vector2 mouse_position = Event.current.mousePosition;
 
-            AddSelectedNode(node_paste);
+            List<BtNodeBase> node_to_paste = CopyNodeDataManager.Instance.GetNodeDataAndResetGuid();
+
+            var paste_operation = new PasteNodeOperation(node_to_paste, mouse_position, this);
+            
+            operation_manager_.ExecuteOperation(paste_operation);
         }
 
         #region 删除节点
 
         public void DeleteNodeData(List<BaseNodeView> nodes_to_delete)
         {
-            node_view_manager_.DeleteNodeData(nodes_to_delete);
+            if (nodes_to_delete == null || !nodes_to_delete.Any())
+                return;
+            
+            NodeViewManager.DeleteNodeData(nodes_to_delete);
+        }
+
+        public void DeleteNodeDataWithOperation(List<BaseNodeView> nodes_to_delete)
+        {
+            if (nodes_to_delete == null || !nodes_to_delete.Any())
+                return;
+
+            var delete_operation = new DeleteNodesCompositeOperation(nodes_to_delete, this);
+            operation_manager_.ExecuteOperation(delete_operation);
         }
 
         #endregion
 
         #region 构建节点
 
+        /// <summary>
+        /// Creates a new node of the specified type at a given position within the graph view.
+        /// If a pending port is provided, establishes a connection between the created node
+        /// and the pending port. Updates the operation history if the view is in user editing mode.
+        /// </summary>
+        /// <param name="nodeType">The type of the node to be created. Must not be null.</param>
+        /// <param name="position">The position in the graph where the new node will be placed.</param>
+        /// <param name="pendingPort">An optional port that this node will connect to upon creation.</param>
         private void CreateNodeAtPosition(Type nodeType, Vector2 position, Port pendingPort = null)
         {
             if (nodeType == null) return;
@@ -683,14 +544,12 @@ namespace Editor.View.BTWindows.BtTreeView
 
             // 添加节点到图表
             AddElement(node);
-
-            var created_connections = new List<Edge>();
+            FlowingEdge edge = null;
 
             // 如果有待连接的端口，创建连接
             if (pendingPort != null)
             {
                 var nodeView = node as BehaviorTreeNodeView;
-                FlowingEdge edge;
 
                 // 检查是否为单一输出如果为单一输出则删除之前的所有的连接
                 if (pendingPort.capacity == Port.Capacity.Single)
@@ -723,25 +582,18 @@ namespace Editor.View.BTWindows.BtTreeView
                 {
                     edge.AddEdgeEffect(new EdgeFlowIndicator());
                     edge.AddEdgeEffect(new EdgeGradientLine());
-                    edge.input.Connect(edge);
-                    edge.output.Connect(edge);
-                    AddElement(edge);
-                    created_connections.Add(edge);
-
-                    // 通知数据变化
-                    var changes = new GraphViewChange
-                    {
-                        edgesToCreate = new List<Edge> { edge }
-                    };
-                    graphViewChanged?.Invoke(changes);
                 }
             }
 
             // 只在用户编辑状态下记录操作
             if (current_view_state_ == ViewState.kUserEditing)
             {
-                var create_operation = new CreateNodeViewOperation(node, this, created_connections);
+                operation_manager_.BeginOperationGroup();
+                var create_operation = new CreateNodeViewOperation(node.NodeData, this);
                 operation_manager_.ExecuteOperation(create_operation);
+                var create_edge_operation = new ConnectEdgeOperation(edge, this);
+                operation_manager_.ExecuteOperation(create_edge_operation);
+                operation_manager_.EndOperationGroup();
             }
         }
 
@@ -786,7 +638,7 @@ namespace Editor.View.BTWindows.BtTreeView
 
         public void MarkAsSaved()
         {
-            is_dirty_ = false;
+            operation_manager_.MarkAsSaved();
         }
 
         #region 自定义右键菜单
@@ -827,14 +679,15 @@ namespace Editor.View.BTWindows.BtTreeView
             evt.menu.AppendAction("剪切节点", _ =>
             {
                 CopyNodeData();
-                DeleteNodeData(selection_list);
+                DeleteNodeDataWithOperation(selection_list);
             }, _ => selection_list.Count > 0 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 
             evt.menu.AppendAction("粘贴节点", _ => PasteNodeData(),
-                _ => copy_node_.Count > 0 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                _ => CopyNodeDataManager.Instance.IsCopyNode ? 
+                    DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
             evt.menu.AppendSeparator();
 
-            evt.menu.AppendAction("删除节点", _ => DeleteNodeData(selection_list),
+            evt.menu.AppendAction("删除节点", _ => DeleteNodeDataWithOperation(selection_list),
                 _ => selection_list.Count > 0
                     ? DropdownMenuAction.Status.Normal
                     : DropdownMenuAction.Status.Disabled);
@@ -846,5 +699,11 @@ namespace Editor.View.BTWindows.BtTreeView
         }
 
         #endregion
+
+
+        public void Dispose()
+        {
+            node_view_manager_?.Dispose();
+        }
     }
 }

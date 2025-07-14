@@ -1,5 +1,6 @@
 using System;
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using BehaviorTree.Nodes.Monster;
 using ExTools;
 using ExTools.Utillties;

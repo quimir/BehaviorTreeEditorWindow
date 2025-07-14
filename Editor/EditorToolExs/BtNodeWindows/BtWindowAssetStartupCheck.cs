@@ -3,11 +3,10 @@ using System.IO;
 using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Core;
 using Editor.View.BtWindows.Core;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
 using Script.BehaviorTree.Save;
-using Script.LogManager;
-using Script.Utillties;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
@@ -124,8 +123,6 @@ namespace Editor.EditorToolExs.BtNodeWindows
 
             if (obj is BtWindowAsset window_asset)
             {
-                BtManagement.SetCurrentFilePath(window_asset.ExternalDatePath);
-
                 var tree_id = BehaviorTreeManagers.instance.GetTree(BehaviorTreeManagers.instance
                     .FindTreeByFilePath(window_asset.GetAbsoluteExternalDatePath())?.GetTreeId())?.GetTreeId();
                 if (string.IsNullOrEmpty(tree_id))

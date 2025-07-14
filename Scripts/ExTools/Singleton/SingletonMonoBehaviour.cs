@@ -1,7 +1,7 @@
 using System;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.Utillties;
 using UnityEngine;
 
 namespace ExTools.Singleton

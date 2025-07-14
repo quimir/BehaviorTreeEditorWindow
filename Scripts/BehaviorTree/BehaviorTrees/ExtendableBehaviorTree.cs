@@ -1,24 +1,25 @@
 using System;
 using System.IO;
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using BehaviorTree.Core;
 using BehaviorTree.Core.WindowData;
 using BehaviorTree.Nodes;
 using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Factory;
+using Save.Serialization.Storage.Serializer;
+using Save.Serialization.Storage.Serializer.JsonNet;
 using Script.BehaviorTree.Save;
-using Script.LogManager;
-using Script.Save.Serialization;
-using Script.Save.Serialization.Factory;
-using Script.Save.Serialization.Storage;
-using Script.Utillties;
 using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
 namespace BehaviorTree.BehaviorTrees
 {
+    [DisallowMultipleComponent]
     [TypeInfoBox("行为树组件 - 用于定义和执行AI行为")]
     public class ExtendableBehaviorTree : MonoBehaviour, IBehaviorTrees
     {
@@ -51,25 +52,7 @@ namespace BehaviorTree.BehaviorTrees
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            var current_asset_guild = BtWindowAsset ? BtWindowAsset.AssetGuid : string.Empty;
-
-            if (current_asset_guild.Equals(loaded_asset_guid_)&&current_asset_guild.Equals(string.Empty))
-            {
-                ClearTreeData();
-                has_been_set_up_ = false;
-
-                if (BtWindowAsset)
-                {
-                    LoadTreeData();
-                    loaded_asset_guid_ = current_asset_guild;
-                }
-                else
-                {
-                    loaded_asset_guid_ = null;
-                }
-
-                EditorUtility.SetDirty(this);
-            }
+            ResetWindowAsset();
         }
 #endif
 
@@ -204,7 +187,8 @@ namespace BehaviorTree.BehaviorTrees
                     if (BtNodeBase == null)
                     {
                         ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(bt_space_,
-                            new LogEntry(LogLevel.kWarning, $"[LoadTreeData] 从文件 '{file_path}' 反序列化得到 null，将使用默认空数据。"));
+                            new LogEntry(LogLevel.kWarning, $"[LoadTreeData] 从文件 '{file_path}' " +
+                                                            $"反序列化得到 null，将使用默认空数据。"));
                         BtNodeBase = new BehaviorTreeWindowData();
                     }
                     else
@@ -217,7 +201,8 @@ namespace BehaviorTree.BehaviorTrees
                 catch (Exception e)
                 {
                     ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).
-                        AddLog(bt_space_,new LogEntry(LogLevel.kError,$"[LoadTreeData] 从文件 '{file_path}' 加载行为树数据失败: {e.Message}\n{e.StackTrace}"),true);
+                        AddLog(bt_space_,new LogEntry(LogLevel.kError,$"[LoadTreeData] 从文件 '{file_path}' " +
+                                                                      $"加载行为树数据失败: {e.Message}\n{e.StackTrace}"),true);
                     BtNodeBase = new BehaviorTreeWindowData(); // 加载失败，使用空数据
                 }
             }
@@ -280,17 +265,15 @@ namespace BehaviorTree.BehaviorTrees
                 if (BtWindowAsset.ExternalDataFileExists()) file_path = BtWindowAsset.GetAbsoluteExternalDatePath();
             }
 
-            var selector = SerializerCreator.Instance.Create(SerializerType.kJson, new SerializationSettings
+            var selector = SerializerCreator.Instance.Create<JsonSerializerWithStorage>
+            (SerializerType.kJson, new SerializationSettings
             {
                 PreserveReferences = true,
                 PrettyPrint = true,
                 TypeNameHandling = SerializationTypeNameHandling.kAuto
             });
 
-            if (selector is IFileStorage file_storage)
-            {
-                file_storage.SaveToFile(BtNodeBase,file_path);
-            }
+            selector.SaveToFile(BtNodeBase, file_path);
 
             // 更新资产文件路径
             if (BtWindowAsset)
@@ -403,7 +386,7 @@ namespace BehaviorTree.BehaviorTrees
             // 4.立即保存更改到磁盘，确保文件写入
             AssetDatabase.SaveAssets();
 
-            // 等于空需要立马写
+            // 不等于空需要立马写
             if (!BtWindowAsset)
             {
                 var created_asset = AssetDatabase.LoadAssetAtPath<BtWindowAsset>(asset_path);
@@ -441,8 +424,8 @@ namespace BehaviorTree.BehaviorTrees
                 {
                     ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(bt_space_,
                         new LogEntry(LogLevel.kError,
-                            $"Failed to load the created BtWindowAsset after creation/postprocessing at path: {asset_path}. Check console for other errors."));
-                    // 如果 Postprocessor 或 CreateAsset 环节有问题，这里可能会失败
+                            $"Failed to load the created BtWindowAsset after creation/postprocessing at path: " +
+                            $"{asset_path}. Check console for other errors."));
                 }
             };
 
@@ -464,23 +447,102 @@ namespace BehaviorTree.BehaviorTrees
                 {
                     if (BtNodeBase.RootNode != null) SaveBtWindow();
                 }
-                else if (BtManagement.GetCurrentFilePath() != BtWindowAsset.ExternalDatePath)
-                {
-                    BtManagement.SetCurrentFilePath(BtWindowAsset.ExternalDatePath);
-                }
             }
             
             EditorBridge.Instance.OnOpenBehaviorTreeWindowRequested?.Invoke(tree_id_);
         }
 
+        /// <summary>
+        /// Associates a new behavior tree window asset with the current behavior tree instance
+        /// and performs any necessary reset or re-initialization of the associated data.
+        /// The method updates the internal reference to the provided `BtWindowAsset` and ensures
+        /// the system correctly reflects the new asset.
+        /// </summary>
+        /// <param name="windowAsset">The new `BtWindowAsset` containing data paths and metadata
+        /// required by the behavior tree system. The parameter must not be null, as valid assets
+        /// are necessary for proper operation.</param>
         public virtual void SetBtWindowAsset(BtWindowAsset windowAsset)
         {
             if (windowAsset) BtWindowAsset = windowAsset;
+            
+            ResetWindowAsset();
         }
 
-        public virtual void SetTreeId(string tree_id)
+        /// <summary>
+        /// Resets the behavior tree's current window asset and handles necessary data synchronization.
+        /// This method ensures that the loaded behavior tree configuration corresponds to the specified asset
+        /// and performs the following tasks:
+        /// - Clears the existing tree data if the new asset differs from the previously loaded one.
+        /// - Marks the tree as not initialized to allow for reinitialization with the new data.
+        /// - Reloads data from the specified `BtWindowAsset` during Unity Editor mode for inspection or preview.
+        /// - Updates the internal reference for the loaded asset's GUID to keep track of changes.
+        /// - If a valid tree ID is present, unregisters the existing tree and registers it again with the behavior tree manager.
+        /// - Marks the Unity component as "dirty," prompting the editor to persist any changes made to the component.
+        /// This method is typically invoked when a new window asset is assigned or during object validation.
+        /// </summary>
+        private void ResetWindowAsset()
         {
-            if (!tree_id.StringEmpty()) tree_id_ = tree_id;
+            var current_asset_guild = BtWindowAsset ? BtWindowAsset.AssetGuid : string.Empty;
+            
+            // 如果当前指定的资产与已加载的资产不一致
+            if (!current_asset_guild.Equals(loaded_asset_guid_))
+            {
+                // 清理旧数据
+                ClearTreeData();
+                
+                // 标记为需要重新初始化
+                has_been_set_up_ = false;
+
+                if (BtWindowAsset)
+                {
+                    // 在编辑器模式下，立即加载新数据以供预览或检查
+                    LoadTreeData();
+                }
+                
+                // 更新已加载的资产GUID记录
+                loaded_asset_guid_ = current_asset_guild;
+
+                if (string.IsNullOrWhiteSpace(tree_id_))
+                {
+                    tree_id_=Guid.NewGuid().ToString();
+                }
+                // 重新注册
+                if (BehaviorTreeManagers.instance.GetTree(tree_id_)!=null)
+                {
+                    BehaviorTreeManagers.instance.UnRegisterTree(tree_id_);
+                    BehaviorTreeManagers.instance.RegisterTree(tree_id_, this);
+                }
+                else
+                {
+                    BehaviorTreeManagers.instance.RegisterTree(tree_id_, this);
+                }
+                
+                // 标记此组件“脏”，以便Unity保存更改
+                EditorUtility.SetDirty(this);
+            }
+        }
+
+        public void SetTreeId(string tree_id)
+        {
+            // 没有进行初始化或者没注册就只进行赋值
+            if (string.IsNullOrEmpty(tree_id_))
+            {
+                tree_id_ = tree_id;
+                return;
+            }
+            
+            if (!string.IsNullOrEmpty(tree_id))
+            {
+                // 取消原本注册的ID
+                if (BehaviorTreeManagers.instance.GetTree(tree_id_)!=null)
+                {
+                    BehaviorTreeManagers.instance.UnRegisterTree(tree_id_);
+                }
+                
+                // 对当前的ID进行注册
+                tree_id_ = tree_id;
+                BehaviorTreeManagers.instance.RegisterTree(tree_id_, this);
+            }
         }
 
 #if UNITY_EDITOR

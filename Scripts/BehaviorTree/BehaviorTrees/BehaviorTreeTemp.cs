@@ -3,21 +3,24 @@ using System.IO;
 using BehaviorTree.BehaviorTreeBlackboard;
 using BehaviorTree.Core;
 using BehaviorTree.Core.WindowData;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.BehaviorTree;
-using Script.LogManager;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 
 namespace BehaviorTree.BehaviorTrees
 {
+    /// <summary>
+    /// Represents a temporary behavior tree used primarily for interim operations or testing purposes within
+    /// the behavior tree framework.
+    /// This class extends the AbstractBehaviorTree and enables the creation, initialization, and management
+    /// of a temporary behavior tree. Temporary behavior trees can be associated with graphical interfaces,
+    /// loaded from specified file paths or assets, and safely managed through their lifecycle.
+    /// The behavior tree can also be attached to game objects for runtime execution.
+    /// </summary>
     public sealed class BehaviorTreeTemp : AbstractBehaviorTree
     {
-        // 是否为临时行为树标记
-        [HideInInspector] public bool is_temporary = true;
-
         public BehaviorTreeTemp()
         {
             tree_id_ = Guid.NewGuid().ToString();
@@ -77,7 +80,8 @@ namespace BehaviorTree.BehaviorTrees
                     {
                         ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(bt_space_,
                             new LogEntry(LogLevel.kInfo,
-                                $"[BtTempBehaviorTree] External data file at '{resolved_external_path}' exists. Ready for parsing."));
+                                $"[BtTempBehaviorTree] External data file at '{resolved_external_path}' exists. " +
+                                $"Ready for parsing."));
 
                         bt_node_base_ = LoadBtWindow(resolved_external_path);
 
@@ -85,7 +89,8 @@ namespace BehaviorTree.BehaviorTrees
                             ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
                                 bt_space_,
                                 new LogEntry(LogLevel.kInfo,
-                                    $"[BtTempBehaviorTree] The specific data of the behavior tree has been obtained from the behavior tree resource file"));
+                                    $"[BtTempBehaviorTree] The specific data of the behavior tree has been " +
+                                    $"obtained from the behavior tree resource file"));
                     }
                 }
 #endif
@@ -98,7 +103,8 @@ namespace BehaviorTree.BehaviorTrees
         {
             if (!asset)
             {
-                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(bt_space_,new LogEntry(LogLevel.kWarning,"未初始化窗口资源，不允许初始化"));
+                ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(bt_space_,new 
+                    LogEntry(LogLevel.kWarning,"未初始化窗口资源，不允许初始化"));
                 return;
             }
             
@@ -107,6 +113,15 @@ namespace BehaviorTree.BehaviorTrees
             bt_node_base_=LoadBtWindow(asset.GetAbsoluteExternalDatePath());
         }
 
+        /// <summary>
+        /// Attaches the behavior tree to a specified GameObject, initializing its data and un-registering
+        /// the tree from the manager if already registered.
+        /// </summary>
+        /// <param name="game_object">The GameObject to which the behavior tree will be attached.</param>
+        /// <returns>
+        /// An instance of <see cref="ExtendableBehaviorTree"/> if the attachment is successful,
+        /// or <c>null</c> if the provided GameObject is null.
+        /// </returns>
         public override ExtendableBehaviorTree AttachToGameObject(GameObject game_object)
         {
             if (game_object == null)
@@ -117,11 +132,12 @@ namespace BehaviorTree.BehaviorTrees
 
             var base_tree = game_object.AddComponent<ExtendableBehaviorTree>();
 
+            // 这时候需要将数据进行移除
+            BehaviorTreeManagers.instance.UnRegisterTree(tree_id_);
             // 设置行为树数据
             base_tree.SetBtWindowAsset(BtWindowAsset);
             base_tree.SetNodeWindow(bt_node_base_);
             base_tree.SetTreeId(tree_id_);
-            
 
             return base_tree;
         }

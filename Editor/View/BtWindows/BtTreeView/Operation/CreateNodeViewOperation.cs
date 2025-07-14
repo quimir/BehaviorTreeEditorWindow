@@ -1,54 +1,55 @@
 using System.Collections.Generic;
-using Editor.EditorToolEx.Operation;
+using BehaviorTree.Nodes;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Core;
 using Editor.View.BTWindows.BtTreeView.NodeView;
-using UnityEditor.Experimental.GraphView;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
+using UnityEngine;
 
 namespace Editor.View.BTWindows.BtTreeView.Operation
 {
+    /// <summary>
+    /// Represents an operation for creating a node view within a behavior tree editor.
+    /// This operation supports execution, undo, and redo functionality, and can be used
+    /// to manage changes to the visual representation of behavior tree nodes.
+    /// </summary>
     public class CreateNodeViewOperation : IOperation
     {
-        private readonly BaseNodeView node_view_;
-        private readonly BehaviorTreeView _behaviorTreeView;
-        private readonly List<Edge> connections_;
+        private readonly BehaviorTreeView tree_view_;
+        private readonly BtNodeBase node_data_;
 
-        public CreateNodeViewOperation(BaseNodeView nodeView, BehaviorTreeView behaviorTreeView, List<Edge> connections=null)
+        public CreateNodeViewOperation(BtNodeBase node_data, BehaviorTreeView tree_view)
         {
-            node_view_ = nodeView;
-            _behaviorTreeView = behaviorTreeView;
-            connections_ = connections??new List<Edge>();
+            tree_view_ = tree_view;
+            node_data_ = node_data;
         }
-
+        
         public void Execute()
         {
+            if (tree_view_.GetNodeViewByGuid(node_data_.Guild)==null)
+            {
+                var node_view=tree_view_.NodeViewManager.CreateNodeView(node_data_);
+                if (node_view!=null)
+                {
+                    tree_view_.AddElement(node_view);
+                }
+            }
         }
 
         public void Undo()
         {
-            foreach (var edge in connections_)
+            var node_view = tree_view_.GetNodeViewByGuid(node_data_.Guild);
+            if (node_view==null)
             {
-                edge.input?.Disconnect(edge);
-                edge.output?.Disconnect(edge);
-                _behaviorTreeView.RemoveElement(edge);
+                return;
             }
             
-            _behaviorTreeView.DeleteNodeData(new List<BaseNodeView>{node_view_});
+            tree_view_.NodeViewManager.DeleteNodeData(new List<BaseNodeView>{node_view});
         }
 
         public void Redo()
         {
-            _behaviorTreeView.AddElement(node_view_);
-            _behaviorTreeView.NodeViewManager.NodeViews[node_view_.NodeData.Guild] = node_view_;
-            // // 重新添加节点
-            // _behaviourTreeView.AddElement(node_view_);
-            // _behaviourTreeView.NodeViews[node_view_.NodeData.Guild] = node_view_;
-
-            foreach (var edge in connections_)
-            {
-                edge.input?.Connect(edge);
-                edge.output?.Connect(edge);
-                _behaviorTreeView.AddElement(edge);
-            }
-            
+            Execute();
         }
 
         public bool RequireSave => true;

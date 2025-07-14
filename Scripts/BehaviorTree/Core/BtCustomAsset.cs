@@ -1,9 +1,8 @@
 using System;
 using System.IO;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Utillties;
 using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;

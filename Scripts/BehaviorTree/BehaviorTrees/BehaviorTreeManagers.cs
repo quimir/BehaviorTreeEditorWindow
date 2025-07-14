@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BehaviorTree.Core;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
 using Save.CustomSerialize;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 
@@ -324,6 +324,11 @@ namespace BehaviorTree.BehaviorTrees
             return open_window_map_.FirstOrDefault(n => n.Key == tree_id).Value;
         }
 
+        /// <summary>
+        /// Saves all data associated with the behavior tree managers.
+        /// This includes persisting changes made to the registered behavior trees
+        /// and their associated windows.
+        /// </summary>
         public void SaveAllData()
         {
             Save(true);

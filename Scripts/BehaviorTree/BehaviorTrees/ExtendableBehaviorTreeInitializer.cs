@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BehaviorTree.Core;
 using Script.BehaviorTree;
-using Script.Utillties;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;

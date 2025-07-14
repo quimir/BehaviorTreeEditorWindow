@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using Save.CustomSerialize;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using UnityEngine;
 
 namespace BehaviorTree.BehaviorTreeBlackboard
@@ -11,7 +13,7 @@ namespace BehaviorTree.BehaviorTreeBlackboard
     [Serializable]
     public class BlackboardStorage : IBlackboardStorage
     {
-        [SerializeField]
+        [PersistField]
         private readonly CustomSerializableDictionary<IBlackboardKey,BlackboardValue> storage_ = new();
         
         public bool TryGetValue<T>(BlackboardKey<T> key, out T value)
@@ -72,6 +74,11 @@ namespace BehaviorTree.BehaviorTreeBlackboard
         
         public int Count=>storage_.Count;
 
+        /// <summary>
+        /// Retrieves a read-only view of the storage containing the blackboard keys and their associated values.
+        /// </summary>
+        /// <returns>A read-only dictionary with keys of type <see cref="IBlackboardKey"/> and values of type
+        /// <see cref="BlackboardValue"/>.</returns>
         public IReadOnlyDictionary<IBlackboardKey, BlackboardValue> GetStorageView() => storage_;
     }
 }

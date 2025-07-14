@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Script.Utillties;
+using ExTools.Utillties;
 using UnityEngine;
 
 namespace LogManager.LogConfigurationManager

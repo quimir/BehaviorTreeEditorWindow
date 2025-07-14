@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using BehaviorTree.Nodes;
 using Save.Serialization;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using Script.BehaviorTree;
 using Script.Save.Serialization;
 using UnityEngine;

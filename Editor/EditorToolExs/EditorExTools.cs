@@ -1,15 +1,11 @@
 using BehaviorTree.Nodes;
 using Editor.View.BTWindows.BtTreeView.NodeView;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
 using ExTools.Singleton;
 using ExTools.Utillties;
-using LogManager.Core;
-using LogManager.LogManagerFactory;
-using Script.BehaviorTree;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Factory;
 using Script.BehaviorTree.Save;
-using Script.LogManager;
-using Script.Save.Serialization;
-using Script.Save.Serialization.Factory;
-using Script.Utillties;
 using Edge = UnityEditor.Experimental.GraphView.Edge;
 
 namespace Editor.EditorToolExs
@@ -26,14 +22,8 @@ namespace Editor.EditorToolExs
             if (edge.output.node is not BaseNodeView output_node) return;
             switch (output_node.NodeData)
             {
-                case BtWeightSelector weightSelector:
-                    if (inputBtNode != null) weightSelector.AddChildWithWeight(inputBtNode.NodeData, 0.1f);
-                    break;
-                case BtPrioritySelector prioritySelector:
-                    if (inputBtNode != null) prioritySelector.AddChildWithPriority(inputBtNode.NodeData, 1);
-                    break;
                 case BtComposite composite:
-                    if (inputBtNode != null) composite.ChildNodes.Add(inputBtNode.NodeData);
+                    if (inputBtNode != null) composite.AddChild(inputBtNode.NodeData);
                     break;
                 case BtPrecondition precondition:
                     if (inputBtNode != null) precondition.ChildNode = inputBtNode.NodeData;
@@ -52,25 +42,11 @@ namespace Editor.EditorToolExs
             if (edge.output.node is not BaseNodeView output_node) return;
             switch (output_node.NodeData)
             {
-                case BtPrioritySelector prioritySelector:
-                    if (inputBtNode != null) prioritySelector.RemoveNode(inputBtNode.NodeData);
-
-                    break;
-                case BtWeightSelector weightSelector:
-                    if (inputBtNode != null) weightSelector.RemoveNode(inputBtNode.NodeData);
-
-                    break;
                 case BtComposite composite:
-                    if (inputBtNode != null)
+                    if (inputBtNode!=null)
                     {
-                        var edge_delete_log = composite.ChildNodes.Remove(inputBtNode.NodeData);
-                        if (!edge_delete_log)
-                            ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(
-                                new LogSpaceNode("Editor").AddChild("ExTool"),
-                                new LogEntry(LogLevel.kWarning,
-                                    $"{composite.NodeName} deletion failure child node: {inputBtNode.name}"));
+                        composite.RemoveChildNode(inputBtNode.NodeData);
                     }
-
                     break;
                 case BtPrecondition precondition:
                     if (inputBtNode != null) precondition.ChildNode = null;

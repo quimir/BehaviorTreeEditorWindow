@@ -1,4 +1,5 @@
 using BehaviorTree.BehaviorTreeBlackboard;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
 using BehaviorTree.Core.WindowData;
 using BehaviorTree.Nodes;
 using Script.BehaviorTree.Save;
@@ -67,6 +68,11 @@ namespace BehaviorTree.Core
         /// <returns>A string representing the unique identifier of the behavior tree.</returns>
         string GetTreeId();
 
+        /// <summary>
+        /// Retrieves the blackboard storage associated with the behavior tree,
+        /// which manages key-value pairs for runtime data sharing and manipulation.
+        /// </summary>
+        /// <returns>The blackboard storage instance as an implementation of IBlackboardStorage.</returns>
         IBlackboardStorage GetBlackboard();
 
         /// <summary>

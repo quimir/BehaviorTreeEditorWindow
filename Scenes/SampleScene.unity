@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 165021181}
   - component: {fileID: 165021180}
   - component: {fileID: 165021179}
+  - component: {fileID: 165021183}
   m_Layer: 0
   m_Name: Cube (1)
   m_TagString: Untagged
@@ -227,6 +228,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &165021183
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 165021178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a93923eab64ddc44f9e8189a58221851, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  BtWindowAsset: {fileID: 11400000, guid: 5108c2422c06dee47a28e196430e9074, type: 2}
+  tree_id_: a09c36ad-957d-409e-a105-94c1c8966174
+  loaded_asset_guid_: 0fde767a-6eed-46dc-b9e4-9b232dd8f682
 --- !u!1 &317807832
 GameObject:
   m_ObjectHideFlags: 0
@@ -740,6 +756,7 @@ GameObject:
   - component: {fileID: 1585877734}
   - component: {fileID: 1585877733}
   - component: {fileID: 1585877732}
+  - component: {fileID: 1585877736}
   m_Layer: 0
   m_Name: Cube (4)
   m_TagString: Untagged
@@ -833,6 +850,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1585877736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1585877731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a93923eab64ddc44f9e8189a58221851, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  BtWindowAsset: {fileID: 0}
+  tree_id_: 5b42465c-1498-49ce-9e18-040b72abe52c
+  loaded_asset_guid_: 
 --- !u!1 &1982350946
 GameObject:
   m_ObjectHideFlags: 0
@@ -843,6 +875,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1982350948}
   - component: {fileID: 1982350947}
+  - component: {fileID: 1982350949}
   m_Layer: 0
   m_Name: TextGameObject
   m_TagString: Untagged
@@ -862,9 +895,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a93923eab64ddc44f9e8189a58221851, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BtWindowAsset: {fileID: 11400000, guid: 67c53fed70e09ad4fb68175e33323f3f, type: 2}
+  BtWindowAsset: {fileID: 11400000, guid: 9b054b8546b106542a7c01c00f44d1c7, type: 2}
   tree_id_: cfbfac82-cde8-4ed8-9184-3be929db0098
-  loaded_asset_guid_: 866041ff-426f-4e2b-866d-d9b5bc6840c0
+  loaded_asset_guid_: 5d9ff106-282e-42eb-8b65-3e91df3d3236
 --- !u!4 &1982350948
 Transform:
   m_ObjectHideFlags: 0
@@ -880,6 +913,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1982350949
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1982350946}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -18,6 +17,10 @@ namespace Editor.View.BtWindows.MenuBar.Core
     /// </summary>
     public abstract class MenuBarItemBase : VisualElement, IMenuBarItem
     {
+        /// <summary>
+        /// The label that displays the title of the menu bar item.
+        /// Used for representing the menu item text visually within the UI.
+        /// </summary>
         protected readonly Label title_label_;
         protected bool is_active_;
         protected bool is_hovered_ = false;
@@ -44,7 +47,7 @@ namespace Editor.View.BtWindows.MenuBar.Core
         {
             menu_name_ = title;
             
-            var style_sheet=AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Editor/Resource/BtWindows/MenuBar/MenuBarItem.uss");
+            var style_sheet=AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Editor/Resource/Shared/MenuBarStyles.uss");
             if (style_sheet!=null)
             {
                 styleSheets.Add(style_sheet);
@@ -172,7 +175,11 @@ namespace Editor.View.BtWindows.MenuBar.Core
             evt.StopPropagation();
         }
 
-        // 关闭菜单的回调方法，在菜单项操作完成后调用
+        /// <summary>
+        /// Executes a specified action and closes the menu associated with the menu bar item.
+        /// This method allows for clean-up actions, including removing focus from the menu.
+        /// </summary>
+        /// <param name="action">The action to execute before closing the menu.</param>
         protected void CloseMenuAfterAction(Action action)
         {
             ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(log_space,

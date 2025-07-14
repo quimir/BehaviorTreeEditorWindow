@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Editor.View.BtWindows.Core
+namespace Editor.View.BtWindows.Core.EditorRestore
 {
     public enum TreePersistenceType
     {
@@ -21,6 +21,8 @@ namespace Editor.View.BtWindows.Core
         public string WindowId;
         public string AssociatedTreeId;
         public TreePersistenceType PersistenceType;
+
+        public Rect Position;
 
         [TextArea(3, 10)] public string SerializedTreeData;
     }

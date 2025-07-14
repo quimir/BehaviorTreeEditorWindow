@@ -1,5 +1,4 @@
 using System;
-using Script.LogManager;
 
 namespace LogManager.Core
 {

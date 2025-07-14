@@ -1,8 +1,10 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Core.TypeConverter.Manager;
 
-namespace Script.Save.Serialization
+namespace Save.Serialization.Core
 {
     /// <summary>
     /// 序列化器接口，此接口用来处理数据如何序列化/反序列化，是否可以处理该类型的数据和什么类型可以序列化/反序列。

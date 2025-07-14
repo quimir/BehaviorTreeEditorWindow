@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using BehaviorTree.Nodes;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Core;
 using UnityEngine.UIElements;
 
 namespace Editor.View.BtWindows.InspectorUI.Core
@@ -14,6 +16,13 @@ namespace Editor.View.BtWindows.InspectorUI.Core
     public abstract class BaseInspectorPanel:IDisposable
     {
         protected VisualElement container_;
+
+        /// <summary>
+        /// Provides access to manage operations specific to the inspector panel.
+        /// This property encapsulates an instance of <see cref="IOperationManager"/>, allowing
+        /// execution, undoing, redoing of operations, and managing operation history within the inspector context.
+        /// </summary>
+        public IOperationManager InspectorOperationManager { get; protected set; }
 
         /// <summary>
         /// Represents the container element of the inspector panel.

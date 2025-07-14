@@ -4,6 +4,8 @@ using BehaviorTree.BehaviorTreeBlackboard;
 using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Core;
 using BehaviorTree.Core.WindowData;
+using BehaviorTree.Nodes;
+using Editor.View.BtWindows.MenuBar;
 using Editor.View.BtWindows.MenuBar.Core;
 using Script.BehaviorTree;
 using UnityEditor;
@@ -136,7 +138,6 @@ namespace Editor.View.BtWindows.Core
 
             var window_id = BehaviorTreeManagers.instance.GetWindowIdByTreeId(tree_id);
             var existing_window = all_window.FirstOrDefault(w => w.WindowInstanceId == window_id);
-
             if (existing_window)
             {
                 existing_window.Focus();
@@ -156,7 +157,6 @@ namespace Editor.View.BtWindows.Core
             menu_bar_=new MenuBarElement(this);
             rootVisualElement.Add(menu_bar_);
         }
-
 
         protected virtual void OnEnable()
         {

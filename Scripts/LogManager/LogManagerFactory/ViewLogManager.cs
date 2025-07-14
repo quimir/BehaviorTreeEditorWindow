@@ -3,11 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using ExTools.Singleton;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogConfigurationManager;
 using LogManager.Storage;
-using Script.LogManager;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 

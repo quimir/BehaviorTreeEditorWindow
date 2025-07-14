@@ -1,7 +1,8 @@
 using System;
 using System.Collections;
 using System.Reflection;
-using Editor.EditorToolEx.Operation;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Core;
 
 namespace Editor.View.BTWindows.InspectorUI.Operations
 {

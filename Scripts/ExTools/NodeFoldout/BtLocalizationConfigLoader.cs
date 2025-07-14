@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Save.Serialization;
-using Script.Save.Serialization.Storage;
-using Script.Utillties;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Storage.Serializer.JsonNet;
 
-namespace Script.Tool.NodeFoldout
+namespace ExTools.NodeFoldout
 {
     /// <summary>
     /// Handles the loading, saving, and management of localization configuration files for nodes.

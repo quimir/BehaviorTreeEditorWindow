@@ -1,9 +1,9 @@
 using BehaviorTree.Nodes;
-using Editor.EditorToolEx.Operation;
 using Editor.EditorToolExs;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Core;
 using Editor.View.BtWindows.Core;
 using Script.BehaviorTree.Save;
-using Script.Utillties;
 
 namespace Editor.View.BTWindows.InspectorUI.Operations
 {

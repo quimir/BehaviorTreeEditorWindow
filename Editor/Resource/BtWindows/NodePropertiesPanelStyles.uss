@@ -1,11 +1,11 @@
 /* 样式化主容器 */
 .properties-panel-container {
     background-color: #2a2a2a; /* 深灰色背景，与你提到的黑色属性板相似 */
-    padding: 10px;
+    padding: 5px;
     border-radius: 5px;
     border-width: 2px;
     border-color: #e0e0e0;
-    margin: 5px;
+    margin: 5px 5px 15px;
 }
 
 /* 样式化 Odin IMGUIContainer */

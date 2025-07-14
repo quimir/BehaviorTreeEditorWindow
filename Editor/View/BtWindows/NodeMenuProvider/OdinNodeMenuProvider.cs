@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using BehaviorTree.Nodes;
 using ExTools;
+using ExTools.NodeFoldout;
 using Script.Tool;
 using Script.Tool.NodeFoldout;
 using Sirenix.OdinInspector.Editor;

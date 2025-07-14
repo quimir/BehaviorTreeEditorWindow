@@ -1,9 +1,7 @@
-using System;
 using LogManager.Core;
-using Script.LogManager;
 using Serilog.Events;
 
-namespace Script.Utillties
+namespace ExTools.Utillties
 {
     public static  class LogLevelConverter
     {

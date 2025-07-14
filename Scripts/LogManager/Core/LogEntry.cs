@@ -4,13 +4,17 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using ExTools;
+using ExTools.Utillties;
 using Script.Tool;
-using Script.Utillties;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace LogManager.Core
 {
+    /// <summary>
+    /// Specifies the logging levels used to categorize log messages based on severity or purpose.
+    /// </summary>
     public enum LogLevel
     {
         /// <summary>

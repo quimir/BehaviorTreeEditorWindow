@@ -1,27 +1,18 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Core;
-using ExTools;
 using ExTools.Singleton;
 using ExTools.Utillties;
-using MessagePack;
-using Script.BehaviorTree;
-using Script.Save.Serialization;
-using Script.Save.Serialization.Factory;
-using Script.Utillties;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Factory;
 using Sirenix.OdinInspector;
-using Sirenix.OdinInspector.Editor;
-using UnityEditor;
 using UnityEngine;
-using Random = System.Random;
 
-namespace Script.Tool
+namespace ExTools
 {
     public class ExTool:SingletonWithLazy<ExTool>
     {
@@ -112,23 +103,6 @@ namespace Script.Tool
                     label_text_cache_[prop] = attr?.Text;
                 }
             }
-        }
-
-        /// <summary>
-        /// 浅拷贝HahSet
-        /// </summary>
-        /// <param name="original">源数据</param>
-        /// <typeparam name="T">任意类型</typeparam>
-        /// <returns>源数据的副本，该副本的修改不会影响源数据</returns>
-        public HashSet<T> ShallowClone<T>(HashSet<T> original)
-        {
-#if UNITY_2021_1_OR_NEWER
-            var clone = new HashSet<T>(original.Count, original.Comparer);
-#else
-        var clone = new HashSet<T>(original.Comparer);
-#endif
-            foreach (var item in original) clone.Add(item);
-            return clone;
         }
 
         public bool CompareByValue<T>(T a, T b)

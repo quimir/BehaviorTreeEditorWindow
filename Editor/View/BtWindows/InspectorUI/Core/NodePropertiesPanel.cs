@@ -4,15 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BehaviorTree.Nodes;
-using Editor.EditorToolEx.Operation;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Storage;
 using Editor.View.BTWindows;
 using Editor.View.BTWindows.BtTreeView;
+using Editor.View.BTWindows.BtTreeView.NodeView;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
+using Editor.View.BtWindows.InspectorUI.Operations;
 using ExTools;
 using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Utillties;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -30,10 +32,8 @@ namespace Editor.View.BtWindows.InspectorUI.Core
 
         // 添加跟踪状态
         private BtNodeBase currentNode;
-
-        private readonly OperationManager operation_manager_;
-        private readonly Dictionary<string, object> values_before_change_ = new();
-        private List<BtNodeBase> child_nodes_snapshot_ = new();
+        
+        private OperationManager operation_manager_;
 
         private MemberInfo tracked_collection_member_;
         private IList collection_snapshot_;
@@ -45,28 +45,7 @@ namespace Editor.View.BtWindows.InspectorUI.Core
         {
             tree_view_ = tree_view;
             operation_manager_ = new OperationManager();
-        }
-
-        private void FindTrackedCollectionMember()
-        {
-            tracked_collection_member_ = null;
-            if (currentNode == null) return;
-
-            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-            // 检查所有字段和属性
-            var members = currentNode.GetType().GetMembers(flags).Where(m =>
-                m.MemberType is MemberTypes.Field or MemberTypes.Property);
-
-            foreach (var member in members)
-                if (member.GetCustomAttribute<PanelDelegatedPropertyAttribute>()?.PanelType ==
-                    PropertyPanelType.kChildNodes)
-                {
-                    // 防止第一次就查找到父类，因为父类有可能不是主要承载数据源
-                    if (member.GetType().GetMember("ChildNodes", flags).FirstOrDefault() != null) continue;
-                    tracked_collection_member_ = member;
-                    return;
-                }
+            InspectorOperationManager=operation_manager_;
         }
 
         private void InitializeChildNodeTracking(BtComposite node)
@@ -100,9 +79,15 @@ namespace Editor.View.BtWindows.InspectorUI.Core
                 // 找出被删除的节点
                 var removedGuids = previousChildGuids.Where(g => !current_child_guids.Contains(g)).ToList();
 
+                var remove_list = new List<BaseNodeView>();
+
                 // 处理删除的节点
                 foreach (var removedGuid in removedGuids)
-                    tree_view_.NodeViewManager.DeleteNodeViewForGuid(removedGuid);
+                {
+                    remove_list.Add(tree_view_.GetNodeViewByGuid(removedGuid));
+                }
+                
+                tree_view_.DeleteNodeDataWithOperation(remove_list);
             }
 
             // 更新记录
@@ -136,9 +121,6 @@ namespace Editor.View.BtWindows.InspectorUI.Core
                         InitializeChildNodeTracking(compositeNode);
                         break;
                 }
-
-                // --- 核心改动：动态查找被标记的集合 ---
-                FindTrackedCollectionMember();
 
                 // --- Core Change: Use IMGUIContainer ---
                 try

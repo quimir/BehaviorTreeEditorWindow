@@ -1,22 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BehaviorTree.BehaviorTreeBlackboard;
-using BehaviorTree.Nodes;
+using BehaviorTree.BehaviorTreeBlackboard.Core;
+using BehaviorTree.Nodes.ChildNode;
 using ExTools;
 using ExTools.Utillties;
-using Save.Serialization;
-using Script.Save.Serialization;
-using Script.Tool;
-using Script.Utillties;
 using Sirenix.OdinInspector;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 
-namespace Script.BehaviorTree
+namespace BehaviorTree.Nodes
 {
     /// <summary>
     /// 对象节点
@@ -89,6 +83,10 @@ namespace Script.BehaviorTree
     {
         protected int current_child_index;
 
+        protected BtSelector(IChildNodeStorage storage) : base(storage)
+        {
+        }
+
         public override BehaviorState Tick(IBlackboardStorage blackboard)
         {
             if (ChildNodes.Count == 0) return BehaviorState.kFailure;
@@ -127,7 +125,9 @@ namespace Script.BehaviorTree
     [NodeFoldoutGroup("选择节点")]
     public class BtNonePrioritySelector : BtSelector
     {
-        protected override bool ShowChildNodes => true;
+        public BtNonePrioritySelector() : base(new BasicChildStorage())
+        {
+        }
 
         // 重置当前选择的子节点索引
         private int last_child_index = -1;
@@ -189,74 +189,25 @@ namespace Script.BehaviorTree
     [NodeFoldoutGroup("选择节点")]
     public class BtPrioritySelector : BtSelector
     {
-        [CustomSerialize]
-        public class NodePriority
+        private PriorityChildStorage TypeStorage=>storage_ as PriorityChildStorage;
+
+        public BtPrioritySelector() : base(new PriorityChildStorage()){}
+
+        public List<NodePriority> GetChildren()
         {
-            public BtNodeBase node_;
-
-            [FormerlySerializedAs("priority")]
-            [MinValue(0)]
-            [LabelText("节点优先级")]
-            public float priority_;
+            return TypeStorage.GetChildren();
         }
-
-        [ShowInInspector] [FoldoutGroup("节点优先级配置")] [LabelText("优先级列表"),PanelDelegatedProperty(PropertyPanelType.kChildNodes)]
-        [HideReferenceObjectPicker]
-        private List<NodePriority> node_priorities_ = new List<NodePriority>();
-
-        public List<NodePriority> NodePriorities => node_priorities_;
-
-        protected override bool ShowChildNodes => false;
 
         public void AddChildWithPriority(BtNodeBase node, int priority)
         {
             if (node == null) return;
-
-            ChildNodes.Add(node);
-            node_priorities_.Add(new NodePriority { node_ = node, priority_ = priority });
-            SortNodePriorities();
-        }
-
-        public void AddChildWithPriorityForIndex(BtNodeBase node, int priority, int index)
-        {
-            if (node == null)
-                return;
             
-            ChildNodes.Insert(index,node);
-            node_priorities_.Insert(index, new NodePriority { node_ = node, priority_ = priority });
-            SortNodePriorities();
-        }
-
-        public void SetNodePriority(BtNodeBase node, int priority)
-        {
-            var node_priority = node_priorities_.Find(np => np.node_ == node);
-            if (node_priority != null)
-            {
-                node_priority.priority_ = priority;
-                SortNodePriorities();
-            }
+            TypeStorage.AddChild(new NodePriority{Node = node,Priority = priority});
         }
 
         public bool RemoveNode(BtNodeBase node)
         {
-            var node_selector = node_priorities_.FirstOrDefault(selector => selector.node_ == node);
-            if (node_selector != null)
-            {
-                node_priorities_.Remove(node_selector);
-                ChildNodes.RemoveAll(n => n.Guild == node.Guild);
-                return true;
-            }
-
-            return false;
-        }
-
-        private void SortNodePriorities()
-        {
-            // 高优先级在前
-            node_priorities_.Sort((a, b) => b.priority_.CompareTo(a.priority_));
-
-            ChildNodes.Clear();
-            foreach (var np in node_priorities_) ChildNodes.Add(np.node_);
+            return TypeStorage.RemoveChildNode(node);
         }
 
         public override BehaviorState Tick(IBlackboardStorage blackboard)
@@ -287,8 +238,7 @@ namespace Script.BehaviorTree
 
         public void Clear()
         {
-            ChildNodes.Clear();
-            node_priorities_.Clear();
+            TypeStorage.Clear();
         }
     }
 
@@ -302,114 +252,58 @@ namespace Script.BehaviorTree
     [NodeFoldoutGroup("选择节点")]
     public class BtWeightSelector : BtSelector
     {
-        [CustomSerialize]
-        [Serializable]
-        [ShowOdinSerializedPropertiesInInspector]
-        public class NodeWeight
+        public BtWeightSelector() : base(new WeightChildStorage())
         {
-            [LabelText("子节点")]
-            public BtNodeBase node_;
-
-            [FormerlySerializedAs("weight")]
-            [MinValue(0)]
-            [LabelText("节点权重")]
-            public float weight_;
-
-            [FormerlySerializedAs("has_been_tested")]
-            [LabelText("节点是否已经测试过")]
-            [ReadOnly]
-            public bool has_been_tested_;
         }
 
-        [ShowInInspector]
-        [FoldoutGroup("@node_name_")] 
-        [LabelText("节点权重列表")]
-        [PanelDelegatedProperty(PropertyPanelType.kChildNodes)]
-        [HideReferenceObjectPicker]
-        private List<NodeWeight> node_weights_ = new List<NodeWeight>();
-        
-        public List<NodeWeight> NodeWeights => node_weights_;
+        private WeightChildStorage TypedStorage => storage_ as WeightChildStorage;
 
-        protected override bool ShowChildNodes => false;
+        /// <summary>
+        /// Retrieves a list of child nodes wrapped with their associated weights.
+        /// </summary>
+        /// <returns>A list of <c>NodeWeight</c> instances representing the child nodes and their corresponding weights.</returns>
+        public List<NodeWeight> GetChildren()
+        {
+            return TypedStorage.GetChildren();
+        }
 
         public void AddChildWithWeight(BtNodeBase node, float weight)
         {
             if (node == null || weight < 0)
                 return;
-
-            // 如果为初始化则重新初始化
-            ChildNodes ??= new List<BtNodeBase>();
-
-            node_weights_ ??= new List<NodeWeight>();
-
-            ChildNodes.Add(node);
-            node_weights_.Add(new NodeWeight
-            {
-                node_ = node,
-                weight_ = weight,
-                has_been_tested_ = false
-            });
-        }
-
-        public void AddChildWeightForIndex(BtNodeBase node, float weight, int index)
-        {
-            if (node==null||weight<0)
-            {
-                return;
-            }
-
-            ChildNodes ??= new List<BtNodeBase>();
             
-            node_weights_ ??= new List<NodeWeight>();
-            
-            ChildNodes.Insert(index,node);
-            node_weights_.Insert(index,new NodeWeight
-            {
-                node_ = node,
-                weight_ = weight,
-                has_been_tested_ = false
-            });
+            TypedStorage.AddChild(new NodeWeight(node, weight));
         }
 
-        public void SetNodeWeight(BtNodeBase node, float weight)
-        {
-            if (weight < 0) return;
-
-            var node_weight = node_weights_.Find(nw => nw.node_ == node);
-            if (node_weight != null) node_weight.weight_ = weight;
-        }
-
+        /// <summary>
+        /// Removes a specified child node from the current node.
+        /// </summary>
+        /// <param name="node">The child node to remove.</param>
+        /// <returns><c>true</c> if the node was successfully removed; otherwise, <c>false</c>.</returns>
         public bool RemoveNode(BtNodeBase node)
         {
-            var node_weight = node_weights_.FirstOrDefault(nw => nw.node_ == node);
-            if (node_weight != null)
-            {
-                node_weights_.Remove(node_weight);
-                ChildNodes.RemoveAll(n => n.Guild == node.Guild);
-                return true;
-            }
-
-            return false;
+            return TypedStorage.RemoveChildNode(node);
         }
 
         public override BehaviorState Tick(IBlackboardStorage blackboard)
         {
-            if (ChildNodes.Count == 0 || node_weights_.Count == 0) return BehaviorState.kFailure;
+            if (ChildNodes.Count == 0 || TypedStorage.Count == 0) return BehaviorState.kFailure;
 
             if (NodeState != BehaviorState.kExecuting)
             {
+                var node_weights = TypedStorage.GetChildren();
                 // 每次tick开始时，重置当前子节点索引
                 current_child_index = -1;
 
                 float total_weight = 0;
-                foreach (var nw in node_weights_)
-                    if (!nw.has_been_tested_) // 只计算未测试的节点
-                        total_weight += nw.weight_;
+                foreach (var nw in node_weights)
+                    if (!nw.HasBeenTested) // 只计算未测试的节点
+                        total_weight += nw.Weight;
 
                 if (total_weight == 0)
                 {
                     // 如果所有节点都已经被测试过，则重置它们的状态
-                    foreach (var nw in node_weights_) nw.has_been_tested_ = false;
+                    foreach (var nw in node_weights) nw.HasBeenTested = false;
 
                     total_weight = 0;
                 }
@@ -417,13 +311,14 @@ namespace Script.BehaviorTree
                 var random_value = Random.Range(0, total_weight);
                 float current_sum = 0;
 
-                for (var i = 0; i < node_weights_.Count; i++)
+                
+                for (var i = 0; i < node_weights.Count; i++)
                 {
-                    var node_weight = node_weights_[i];
+                    var node_weight = node_weights[i];
 
-                    if (node_weight.has_been_tested_) continue; // 跳过已经测试的节点
+                    if (node_weight.HasBeenTested) continue; // 跳过已经测试的节点
 
-                    current_sum += node_weight.weight_;
+                    current_sum += node_weight.Weight;
                     if (random_value <= current_sum)
                     {
                         current_child_index = i;
@@ -431,7 +326,7 @@ namespace Script.BehaviorTree
                     }
                 }
 
-                if (current_child_index != -1) node_weights_[current_child_index].has_been_tested_ = true; // 标记已测试完
+                if (current_child_index != -1) node_weights[current_child_index].HasBeenTested = true; // 标记已测试完
             }
 
             var current_node = ChildNodes[current_child_index];
@@ -441,8 +336,7 @@ namespace Script.BehaviorTree
 
         public void Clear()
         {
-            node_weights_?.Clear();
-            ChildNodes?.Clear();
+            TypedStorage.Clear();
         }
     }
 
@@ -450,8 +344,6 @@ namespace Script.BehaviorTree
     public class BtSequence : BtComposite
     {
         private int current_child_index;
-
-        protected override bool ShowChildNodes => true;
 
         public override BehaviorState Tick(IBlackboardStorage blackboard)
         {
@@ -487,8 +379,6 @@ namespace Script.BehaviorTree
     [NodeLabel("并行节点")]
     public class BtParallel : BtComposite
     {
-        protected override bool ShowChildNodes => true;
-
         [FoldoutGroup("并行运行条件")] [LabelText("成功所需数量")][MinValue(0)]
         public int success_threshold_ = 1;
 

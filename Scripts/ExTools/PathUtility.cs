@@ -1,8 +1,8 @@
 using System.IO;
 using ExTools.Singleton;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.Utillties;
 using UnityEditor;
 using UnityEngine;
 

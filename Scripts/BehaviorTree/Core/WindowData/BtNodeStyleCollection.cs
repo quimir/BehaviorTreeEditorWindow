@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Save.Serialization;
+using Save.Serialization.Core.TypeConverter;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using Script.BehaviorTree.Save;
 
 namespace BehaviorTree.Core.WindowData
@@ -19,6 +21,15 @@ namespace BehaviorTree.Core.WindowData
             public BtNodeStyle Style;
         }
 
+        /// <summary>
+        /// A collection of style entries representing node GUIDs and their associated styles in a behavior tree.
+        /// </summary>
+        /// <remarks>
+        /// This property provides access to the list of <see cref="StyleEntry"/> instances,
+        /// where each entry contains a node GUID and its corresponding style definition.
+        /// It supports operations such as serialization, deserialization, and transformation
+        /// between collections and dictionaries through provided functionality within the containing class.
+        /// </remarks>
         public List<StyleEntry> Entries { get; } = new();
 
         /// <summary>

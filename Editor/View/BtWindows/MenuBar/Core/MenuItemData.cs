@@ -47,6 +47,20 @@ namespace Editor.View.BtWindows.MenuBar.Core
         /// </summary>
         public List<MenuItemData> SubItems;
 
+        /// <summary>
+        /// Represents a menu item in the application's menu system.
+        /// This class provides properties and methods to define menu item characteristics,
+        /// manage subitems, and trigger associated actions.
+        /// </summary>
+        /// <param name="item_name">Represents the name of the menu item displayed in the menu.
+        /// This property determines the text label shown for a menu item
+        /// in the user interface.</param>
+        /// <param name="is_enabled">Indicates whether the menu item is enabled or disabled.
+        /// This property determines if the menu item can be interacted with.
+        /// When set to false, the menu item is displayed as inactive and is non-clickable.</param>
+        /// <param name="action">Represents the action associated with a menu item.
+        /// This delegate is executed when the corresponding menu item is selected
+        /// or activated, allowing for custom behavior to be implemented.</param>
         public MenuItemData(string item_name, bool is_enabled = true, Action action = null)
         {
             Name = item_name;
@@ -56,6 +70,15 @@ namespace Editor.View.BtWindows.MenuBar.Core
             SubItems = new List<MenuItemData>();
         }
 
+        /// <summary>
+        /// Represents a menu item in the menu bar. This class provides properties
+        /// to define the name, state, associated action, and subitems of a menu item.
+        /// It supports hierarchical menus and defines methods to manage them.
+        /// </summary>
+        /// <param name="item_name">Specifies the name of the menu item. This value is displayed as the label for the
+        /// menu item in the UI.</param>
+        /// <param name="sub_items">Defines a list of child menu items for nested or hierarchical menu structures.
+        /// This parameter represents the item's sub-menu items.</param>
         public MenuItemData(string item_name, List<MenuItemData> sub_items)
         {
             // 多级菜单来说，父类不应该添加对应的Action

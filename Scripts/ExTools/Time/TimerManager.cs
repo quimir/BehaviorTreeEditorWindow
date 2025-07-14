@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using ExTools.Singleton;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Utillties;
+using Script.Tool.Timer;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Script.Tool.Timer
+namespace ExTools.Time
 {
     public class TimerManager : SingletonWithLazy<TimerManager>
     {
@@ -32,7 +32,7 @@ namespace Script.Tool.Timer
         /// <exception cref="Exception">Logs any exceptions thrown by a timer action but does not rethrow them.</exception>
         public void Update()
         {
-            time_ = Time.unscaledTime;
+            time_ = UnityEngine.Time.unscaledTime;
 
             var i = 0;
 

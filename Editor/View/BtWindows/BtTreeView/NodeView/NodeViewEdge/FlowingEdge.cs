@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using ExTools.Utillties;
-using Script.Utillties;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
@@ -29,10 +29,15 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         /// It allows for dynamic addition and removal of effects and ensures proper lifecycle management
         /// (such as enabling, disabling, or updating effects) based on the state of the edge.
         /// </remarks>
-        private readonly HashSet<IEdgeEffect> all_edge_effects_ = new HashSet<IEdgeEffect>();
+        private readonly HashSet<IEdgeEffect> all_edge_effects_ = new();
 
         // 记录上次的时间点用于计算增量时间
         private double last_update_time_;
+        private bool use_external_update_ = false;
+
+        private float cache_delta_time_ = 0.0f;
+        private const float kMinDeltaTime = 0.001f;
+        private const float kMaxDeltaTime = 0.1f;
 
         public FlowingEdge()
         {
@@ -53,11 +58,11 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         public bool AddEdgeEffect(IEdgeEffect effect)
         {
             if (!all_edge_effects_.Add(effect)) return false;
-            
+
             // 订阅事件
-            effect.OnEnabledChanged+=HandleEffectEnabledChanged;
+            effect.OnEnabledChanged += HandleEffectEnabledChanged;
             Add(effect.Root);
-            
+
             // 重新评估整体状态
             UpdateFlowEnableState();
             return true;
@@ -68,12 +73,9 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         /// </summary>
         private void UpdateFlowEnableState()
         {
-            bool should_be_enabled = all_edge_effects_.Any(e => e.Enabled);
+            var should_be_enabled = all_edge_effects_.Any(e => e.Enabled);
 
-            if (is_enable_flow_!=should_be_enabled)
-            {
-                is_enable_flow_ = should_be_enabled;
-            }
+            if (is_enable_flow_ != should_be_enabled) is_enable_flow_ = should_be_enabled;
         }
 
         private void HandleEffectEnabledChanged(IEdgeEffect obj)
@@ -91,10 +93,10 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         public bool RemoveEdgeEffect(IEdgeEffect effect)
         {
             if (!all_edge_effects_.Remove(effect)) return false;
-            
-            effect.OnEnabledChanged-=HandleEffectEnabledChanged;
+
+            effect.OnEnabledChanged -= HandleEffectEnabledChanged;
             Remove(effect.Root);
-            
+
             UpdateFlowEnableState();
             return true;
         }
@@ -115,10 +117,7 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
                 // 最终通过 HandleEffectEnabledChanged -> UpdateFlowEnableState 
                 // 来正确地更新 is_enable_flow_ 的值。
                 is_enable_flow_ = value;
-                foreach (var effect in all_edge_effects_)
-                {
-                    effect.Enabled = value;
-                }
+                foreach (var effect in all_edge_effects_) effect.Enabled = value;
             }
         }
 
@@ -134,12 +133,52 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
                 {
                     current_state_ = value;
 
-                    foreach (var effect in all_edge_effects_)
-                    {
-                        effect.UpdateState(current_state_);
-                    }
+                    foreach (var effect in all_edge_effects_) effect.UpdateState(current_state_);
                 }
             }
+        }
+
+        public void SetExternalUpdateMode(bool use_external)
+        {
+            use_external_update_ = use_external;
+            if (use_external)
+                // 重置时间，避免第一次外部更新时deltaTime过大
+                last_update_time_ = EditorApplication.timeSinceStartup;
+        }
+
+        /// <summary>
+        /// Updates all active edge effects applied to the FlowingEdge, ensuring they remain synchronized and animated
+        /// based on the given time interval.
+        /// </summary>
+        /// <param name="delta_time">The time interval to update the effects. If defaulted to -1, the method calculates
+        /// the interval internally based on the editor's time since the last update. The interval is clamped between
+        /// a minimum and maximum value to ensure smooth animations.</param>
+        public void UpdateEffects(float delta_time = -1f)
+        {
+            if (!is_enable_flow_ || edgeControl.controlPoints is not { Length: > 1 }) return;
+
+            float actual_delta_time;
+
+            if (delta_time < 0)
+            {
+                // 自动计算delta_time
+                var current_time = EditorApplication.timeSinceStartup;
+                actual_delta_time = (float)(current_time - last_update_time_);
+                last_update_time_ = current_time;
+            }
+            else
+            {
+                actual_delta_time = delta_time;
+            }
+
+            // 限制deltaTime范围，避免动画跳跃或过慢
+            actual_delta_time = Mathf.Clamp(actual_delta_time, kMinDeltaTime, kMaxDeltaTime);
+            cache_delta_time_ = actual_delta_time;
+
+            // 更新所有效果
+            foreach (var effect in all_edge_effects_)
+                if (effect.Enabled)
+                    effect.Update(edgeControl.controlPoints, actual_delta_time);
         }
 
         /// <summary>
@@ -151,20 +190,8 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         public override bool UpdateEdgeControl()
         {
             if (!base.UpdateEdgeControl()) return false;
-            
-            // 计算时间增量
-            var current_time = EditorApplication.timeSinceStartup;
-            var delta_time = (float)(current_time - last_update_time_);
-            last_update_time_ = current_time;
 
-            // 更新效果组件
-            if (is_enable_flow_ && edgeControl.controlPoints is { Length: > 1 })
-            {
-                foreach (var effect in all_edge_effects_)
-                {
-                    effect.Update(edgeControl.controlPoints, delta_time);
-                }
-            }
+            if (!use_external_update_) UpdateEffects();
 
             return true;
         }
@@ -183,7 +210,7 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
                 effect.Update(edgeControl.controlPoints, 0);
             }
         }
-        
+
         /// <summary>
         /// Retrieves a specific edge effect of type T from the collection.
         /// </summary>
@@ -192,10 +219,8 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge
         public T GetEdgeEffect<T>() where T : class, IEdgeEffect
         {
             foreach (var effect in all_edge_effects_)
-            {
                 if (effect is T t)
                     return t;
-            }
 
             return null;
         }

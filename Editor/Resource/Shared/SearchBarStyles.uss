@@ -1,0 +1,253 @@
+/* 搜索栏浮动容器 */
+.search-bar-floating {
+    position: absolute; /* 改为绝对定位 */
+    right: 5px;
+    top:10px;
+    
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 8px;
+    
+    background-color: rgba(255, 255, 255, 243);
+    border-color: rgba(160, 160, 160, 0.85);
+    border-width: 2px;
+    border-radius: 10px;
+
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 3;
+
+    max-width: 80%;
+    min-width: 300px;
+    height: 40px;
+}
+/* 搜索图标 */
+.search-icon {
+    width: 16px;
+    height: 20px;
+    margin-right: 6px;
+    background-image: url("Image/search.png");
+    -unity-background-image-tint-color: rgba(200, 200, 200, 0.8);
+}
+
+/* 搜索输入框 */
+.search-field {
+    width: 300px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.search-field .unity-text-field__input {
+    background-color: transparent;
+    border-width: 0;
+    color: #CCCCCC;
+    font-size: 12px;
+    padding: 2px 4px;
+    margin: 0;
+}
+
+/* 搜索框聚焦状态 */
+.search-field:focus .unity-text-field__input {
+    background-color: rgba(70, 70, 70, 0.6);
+    border-color: rgba(100, 150, 200, 0.8);
+    border-width: 1px;
+    border-radius: 3px;
+}
+
+/* 无结果时的红色样式 */
+.search-field.no-results .unity-text-field__input {
+    color: #FF5252;
+}
+
+/* 清除按钮 */
+.clear-button {
+    width: 18px;
+    height: 18px;
+    margin: 0 4px;
+    padding: 0;
+    border-radius: 9px;
+    background-color: rgba(200, 200, 200, 0.2);
+    border-width: 0;
+    font-size: 12px;
+    color: #CCCCCC;
+    flex-shrink: 0;
+}
+
+.clear-button:hover {
+    background-color: rgba(255, 100, 100, 0.6);
+    color: white;
+}
+
+/* 过滤器容器 */
+.filters-container {
+    flex-direction: row;
+    margin: 0 6px;
+    align-items: center;
+}
+
+/* 过滤器按钮 */
+.filter-toggle {
+    width: 20px;
+    height: 20px;
+    margin: 0 2px;
+    padding: 0;
+    border-radius: 3px;
+    background-color: rgba(240, 255, 242, 0.5);
+    border-width: 1px;
+    border-color: rgba(120, 120, 120, 0.4);
+    flex-shrink: 0;
+}
+
+.filter-toggle:hover {
+    background-color: rgba(100, 100, 100, 0.8);
+    border-color: rgba(140, 140, 140, 0.6);
+}
+
+.filter-toggle.active {
+    background-color: rgba(100, 150, 200, 0.8);
+    border-color: rgba(130, 170, 220, 1);
+}
+
+/* 分隔符 */
+.separator {
+    width: 1px;
+    height: 16px;
+    background-color: rgba(120, 120, 120, 0.6);
+    margin: 0 8px;
+    flex-shrink: 0;
+}
+
+/* 结果标签 */
+.result-label {
+    font-size: 11px;
+    color: #AAAAAA;
+    margin: 0 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.result-label.no-results {
+    color: #FF5252;
+}
+
+/* 导航按钮 */
+.nav-button {
+    width: 20px;
+    height: 20px;
+    margin: 0 2px;
+    padding: 0;
+    border-radius: 3px;
+    background-color: rgba(80, 80, 80, 0.6);
+    border-width: 1px;
+    border-color: rgba(120, 120, 120, 0.4);
+    flex-shrink: 0;
+}
+
+.nav-button:hover {
+    background-color: rgba(100, 100, 100, 0.8);
+    border-color: rgba(140, 140, 140, 0.6);
+}
+
+.nav-button:disabled {
+    background-color: rgba(50, 50, 50, 0.4);
+    border-color: rgba(80, 80, 80, 0.3);
+    -unity-background-image-tint-color: rgba(100, 100, 100, 0.4);
+}
+
+/* 上一个按钮 */
+.prev-button {
+    background-image: url("Image/up.png");
+    -unity-background-image-tint-color: rgba(200, 200, 200, 0.8);
+}
+
+/* 下一个按钮 */
+.next-button {
+    background-image: url("Image/down.png");
+    -unity-background-image-tint-color: rgba(200, 200, 200, 0.8);
+}
+
+/* 关闭按钮 */
+.close-button {
+    position: relative;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    padding: 0;
+    border-radius: 10px;
+    background-color: rgba(200, 80, 80, 0.6);
+    border-width: 0;
+    font-size: 14px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.close-button:hover {
+    background-color: rgba(220, 100, 100, 0.8);
+}
+
+/* 隐藏类 */
+.hidden {
+    display: none;
+}
+
+/* 根容器样式 */
+.custom-search-field {
+    flex-direction: row;
+    align-items: center;
+    height: 22px;
+    padding: 0 4px;
+    background-color: rgb(60, 60, 60);
+    border-color: rgb(30, 30, 30);
+    border-width: 1px;
+    border-radius: 3px;
+    position: relative; /* 为子元素的绝对定位提供上下文 */
+}
+
+/* 聚焦时的根容器样式 */
+.custom-search-field--focused {
+    background-color: rgb(75, 75, 75); /* 背景变化 */
+    border-color: rgb(64, 128, 223);    /* 边框高亮，形成对比 */
+}
+
+/* 占位符样式 */
+.custom-search-field__placeholder {
+    position: absolute; /* 覆盖在 text-input 之上 */
+    color: rgb(150, 150, 150);
+    margin: 0;
+    padding: 0;
+}
+
+/* 文本和光标的直接容器 */
+.custom-search-field__text-input {
+    flex-grow: 1;
+    flex-direction: row; /* 让文本和光标水平排列 */
+    align-items: center;
+    position: relative; /* 为光标的绝对定位提供上下文 */
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* 文本显示 Label 的样式 */
+.custom-search-field__text-display {
+    color: rgb(200, 200, 200); /* 默认文本颜色 */
+    margin: 0;
+    padding: 0;
+}
+
+/* 聚焦时，文本颜色变为白色，与深色背景形成高对比度 */
+.custom-search-field--focused .custom-search-field__text-display {
+    color: white;
+}
+
+/* 光标样式 */
+.custom-search-field__caret {
+    position: absolute;
+    width: 1px;
+    height: 80%; /* 不占满全部高度，更像真实光标 */
+    top: 10%;
+    background-color: rgb(220, 220, 220); /* 光标颜色 */
+}

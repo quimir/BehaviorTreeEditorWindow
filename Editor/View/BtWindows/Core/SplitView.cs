@@ -4,18 +4,30 @@ using UnityEngine.UIElements;
 
 namespace Editor.View.BtWindows.Core
 {
+    /// <summary>
+    /// Represents a custom UI component derived from TwoPaneSplitView. The SplitView is used for
+    /// dividing and resizing two panes horizontally, with customization options such as fixed initial
+    /// dimensions for the panes and default orientation.
+    /// </summary>
     public class SplitView : TwoPaneSplitView
     {
         // 默认的分割位置
         private const float DEFAULT_SPLIT_POSITION = 400f;
 
         private float last_dimension_ = 0;
-        
+
+        /// <summary>
+        /// Gets or sets the initial dimension of the fixed pane in a split view layout.
+        /// This property determines the starting size of the fixed pane,
+        /// which is typically used to define the split ratio or layout structure
+        /// within a user interface.
+        /// </summary>
         public float FixedPaneInitialDimension
         {
             get=>fixedPaneInitialDimension;
             set=>fixedPaneInitialDimension=value;
         }
+        
         public new class UxmlTraits : TwoPaneSplitView.UxmlTraits
         {
             public override void Init(VisualElement ve, IUxmlAttributes bag, CreationContext cc)

@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using ExTools;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Save.Serialization.Storage;
-using Script.Utillties;
+using Save.Serialization.Storage.Serializer.JsonNet;
+using Script.Tool.NodeFoldout;
 
-namespace Script.Tool.NodeFoldout
+namespace ExTools.NodeFoldout
 {
     public class BtNodeLocalizationStorage
     {

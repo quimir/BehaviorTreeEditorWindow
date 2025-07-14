@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
+using Editor.View.BtWindows.BtTreeView;
+using Editor.View.BtWindows.BtTreeView.NodeView;
 using Editor.View.BTWindows.BtTreeView.NodeView;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
 using Editor.View.BtWindows.Core;
 using Editor.View.BtWindows.MenuBar.Core;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.Utillties;
 
 namespace Editor.View.BtWindows.MenuBar.Storage
 {
@@ -27,7 +30,7 @@ namespace Editor.View.BtWindows.MenuBar.Storage
             }
 
             var hasSelection = behavior_tree_window.BehaviorTreeView.selection.Count != 0;
-            var hasCopiedNodes = behavior_tree_window.BehaviorTreeView.CopyNode.Count != 0;
+            var hasCopiedNodes = CopyNodeDataManager.Instance.IsCopyNode;
 
             var menuItems = new List<MenuItemData>();
 
@@ -48,7 +51,7 @@ namespace Editor.View.BtWindows.MenuBar.Storage
 
             menuItems.Add(new MenuItemData("删除", hasSelection, () =>
             {
-                behavior_tree_window.BehaviorTreeView.DeleteNodeData(
+                behavior_tree_window.BehaviorTreeView.DeleteNodeDataWithOperation(
                     behavior_tree_window.BehaviorTreeView.selection.OfType<BaseNodeView>().ToList());
                 ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace)
                     .AddLog(log_space, new LogEntry(LogLevel.kInfo, "执行删除操作"));

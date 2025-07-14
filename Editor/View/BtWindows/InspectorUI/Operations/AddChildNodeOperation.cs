@@ -1,4 +1,5 @@
-using Editor.EditorToolEx.Operation;
+using Editor.EditorToolExs.Operation;
+using Editor.EditorToolExs.Operation.Core;
 using Script.BehaviorTree;
 
 namespace Editor.View.BTWindows.InspectorUI.Operations

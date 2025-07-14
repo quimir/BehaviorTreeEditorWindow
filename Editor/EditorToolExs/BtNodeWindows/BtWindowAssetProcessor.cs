@@ -3,12 +3,11 @@ using System.IO;
 using System.Linq;
 using BehaviorTree.Core;
 using ExTools;
+using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
-using Script.LogManager;
-using Script.Utillties;
+using Save.FileStorage;
 using UnityEditor;
-using UnityEngine;
 
 namespace Editor.EditorToolExs.BtNodeWindows
 {
@@ -83,6 +82,7 @@ namespace Editor.EditorToolExs.BtNodeWindows
                         var new_external_path=PathUtility.Instance.AbsoluteToRelativePath(new_data_path);
                         asset.ExternalDatePath = new_external_path;
                     }
+                FileRecordManager.Instance.FilePathStorage.AddOrUpdateFile(new_asset_path,old_asset_path);
             }
 
             // 处理删除的资源
@@ -112,14 +112,14 @@ namespace Editor.EditorToolExs.BtNodeWindows
                                 .AddLog(log_space_,
                                     new LogEntry(LogLevel.kError,
                                         $"[AssetProcessor] Failed to delete associated data file '{data_path}': {e.Message}"));
-                            ;
                         }
+                    
+                    FileRecordManager.Instance.FilePathStorage.RemoveFile(deleted_asset_path);
                 }
 
             // 处理导入/新创建的资源
             foreach (var imported_asset_path in importedAssets)
             {
-                // A. 处理 ScriptableObject (.asset)，确保附属文件存在
                 if (imported_asset_path.EndsWith(TargetExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     var asset = AssetDatabase.LoadAssetAtPath<BtWindowAsset>(imported_asset_path);
@@ -142,20 +142,6 @@ namespace Editor.EditorToolExs.BtNodeWindows
                         AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
                     }
                 }
-
-                // // B. 处理附属文件 (.btwindowtemp)，将其隐藏
-                // if (imported_asset_path.EndsWith(DataFileExtension, StringComparison.OrdinalIgnoreCase))
-                // {
-                //     var importer = AssetImporter.GetAtPath(imported_asset_path);
-                //     if (importer != null && (importer.hideFlags & HideFlags.HideInHierarchy) == 0)
-                //     {
-                //         importer.hideFlags |= HideFlags.HideInHierarchy;
-                //         importer.SaveAndReimport();
-                //         ViewLogManagerFactory.Instance.TryGetLogWriter(FixedValues.kDefaultLogSpace).AddLog(log_space_,
-                //             new LogEntry(LogLevel.kInfo,
-                //                 $"[AssetProcessor] Hidden associated data file '{imported_asset_path}'."));
-                //     }
-                // }
             }
         }
     }

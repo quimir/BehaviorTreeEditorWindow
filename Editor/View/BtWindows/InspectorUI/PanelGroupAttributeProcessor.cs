@@ -1,19 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using BehaviorTree.Nodes;
 using ExTools;
 using ExTools.Utillties;
-using Script.BehaviorTree;
-using Script.Tool;
-using Script.Utillties;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
-using Sirenix.Utilities;
-using UnityEngine;
 
-// 创建一个特性处理器，用于在不同面板中组织属性
 namespace Editor.View.BTWindows.InspectorUI
 {
     /// <summary>

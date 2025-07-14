@@ -1,13 +1,13 @@
 using System;
 using BehaviorTree.BehaviorTrees;
 using BehaviorTree.Nodes;
+using Editor.View.BtWindows.BtTreeView.NodeView.Core;
 using Editor.View.BTWindows.BtTreeView.NodeView.NodeViewEdge;
 using ExTools.Utillties;
 using LogManager.Core;
 using LogManager.LogManagerFactory;
 using Script.BehaviorTree;
 using Script.BehaviorTree.Save;
-using Script.Utillties;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -223,7 +223,7 @@ namespace Editor.View.BTWindows.BtTreeView.NodeView
         /// <summary>
         /// Initializes the window size of the Behavior Tree node view.
         /// </summary>
-        /// <param name="new_rect">The size and position of the node view. The dimensions will be clamped to the minimum allowable width and height defined in <see cref="Script.Utillties.FixedValues"/>.</param>
+        /// <param name="new_rect">The size and position of the node view. The dimensions will be clamped to the minimum allowable width and height defined in <see cref="FixedValues"/>.</param>
         private void InitWindowSize(Rect new_rect)
         {
             capabilities |= Capabilities.Resizable;

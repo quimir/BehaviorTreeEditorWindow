@@ -1,6 +1,5 @@
 using System;
 using ExTools.Utillties;
-using Script.Utillties;
 
 namespace ExTools
 {
@@ -50,12 +49,29 @@ namespace ExTools
         }
     }
 
+    /// <summary>
+    /// Attribute used to designate a property or field for integration into a specific property panel type.
+    /// </summary>
+    /// <remarks>
+    /// Applied to fields or properties to specify the relationship with a designated
+    /// property panel type. Supports options for inheritance and child application.
+    /// </remarks>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class, AllowMultiple = false,
         Inherited = true)]
     public class PanelDelegatedPropertyAttribute : Attribute
     {
+        /// <summary>
+        /// Represents the type of property panel associated with the attribute.
+        /// </summary>
         public PropertyPanelType PanelType { get; private set; }
 
+        /// <summary>
+        /// Indicates whether the attribute should also apply to child elements or derived members.
+        /// </summary>
+        /// <remarks>
+        /// When set to true, the attribute will extend its effect to child elements or derived members,
+        /// allowing inheritance of the specified property or behavior in the hierarchy.
+        /// </remarks>
         public bool ApplyToChildren { get; set; }
 
         public PanelDelegatedPropertyAttribute(PropertyPanelType panelType, bool apply_to_children = false)

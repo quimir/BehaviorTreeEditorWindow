@@ -1,5 +1,6 @@
 using BehaviorTree.BehaviorTreeBlackboard;
 using BehaviorTree.Nodes;
+using Save.Serialization.Core.TypeConverter.SerializerAttribute;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -55,17 +56,20 @@ namespace BehaviorTree.Core.WindowData
         /// </remarks>
         public BtNodeStyleCollection NodeStyleMap;
 
+
         /// <summary>
-        /// Represents the centralized data structure utilized to store and manage shared information
-        /// within a behavior tree system.
+        /// Represents the blackboard storage for behavior tree data.
         /// </summary>
         /// <remarks>
-        /// The `Blackboard` serves as a shared repository for various variables and data within the
-        /// behavior tree framework. It provides a mechanism for nodes in the tree to access and
-        /// modify data during execution. This instance leverages a layered approach, allowing the
-        /// integration of multiple data scopes and shared storage for efficient information management.
-        /// Any adjustments to the `Blackboard` impact the execution logic of the corresponding behavior tree.
+        /// This variable serves as a centralized storage mechanism for behavior tree-related data.
+        /// It encapsulates a key-value storage structure that allows the behavior tree nodes
+        /// to share and access common data during runtime. The blackboard concept is widely
+        /// used in behavior tree implementations to enable interaction and communication
+        /// across different nodes without direct coupling.
+        /// Modifications to this property impact the data accessible throughout the behavior tree,
+        /// which may affect decision-making or actions performed by various behavior nodes.
+        /// Typically, this property is initialized or assigned during the behavior tree setup process.
         /// </remarks>
-        public LayeredBlackboard Blackboard = new(new BlackboardStorage());
+        public LayeredBlackboard Blackboard = new LayeredBlackboard(null);
     }
 }
